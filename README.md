@@ -8,7 +8,7 @@ This is only for playing around for now. But much more functionality can be expe
 
 ## Usage
 
-__Leiningen__
+__Leiningen__ ([via Clojars](https://clojars.org/panoptic))
 
 ```clojure
 [panoptic "0.1.0-SNAPSHOT"]
