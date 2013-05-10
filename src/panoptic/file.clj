@@ -102,12 +102,14 @@
                  (->> children
                    (filter #(fs/file? (str path "/" %)))
                    (filter valid-extension?)
-                   (filter include-file?)))
+                   (filter include-file?)
+                   (set)))
           (assoc :directories 
                  (->> children
                    (filter #(fs/directory? (str path "/" %)))
                    (filter #(or include-hidden (not (.startsWith ^String % "."))))
-                   (filter include-dir?))))))))
+                   (filter include-dir?)
+                   (set))))))))
 
 (defn directories
   "Create seq of directories by recursively traversing the directory tree starting at

@@ -1,6 +1,7 @@
-(ns ^{:doc "Watcher Implementation for Panoptic"
+(ns ^{:doc "File Watchers"
       :author "Yannick Scherer"}
-  panoptic.watcher
+  panoptic.watchers.file
+  (:use panoptic.watchers.core)
   (:require [panoptic.checkers :as c]
             [panoptic.file :as f]
             [panoptic.utils :as u]
@@ -34,17 +35,6 @@
 (def on-create (partial on-flag-set :created))
 (def on-delete (partial on-flag-set :deleted))
 (def on-modify (partial on-flag-set :modified))
-
-;; ## Watcher Protocol
-
-(defprotocol Watcher
-  "Protocol for Watcher."
-  (start-watcher!* [this opts] "Start Watcher.")
-  (stop-watcher! [this] "Stop Watcher."))
-
-(defn start-watcher!
-  [w & opts]
-  (start-watcher!* w (apply hash-map opts)))
 
 ;; ## FileWatcher
 
@@ -115,20 +105,3 @@
   "Create new FileWatcher."
   [file-observable]
   (FileWatcher. file-observable (atom nil)))
-
-;; ## Watching Directories
-
-(defn- check-directory
-  "Check the given directory for new files/subdirectories, returning `nil` if it was deleted."
-  [{:keys [path files include-hidden extensions directories] :as dir}]
-  (if-let [d (f/directory path :extensions extensions :include-hidden include-hidden)]
-    nil
-    (f/set-directory-deleted dir)))
-
-(defn run-directory-watcher!
-  "Create Watcher that checks the directories contained in the given
-   atom in a periodic fashion, using the given polling interval. Returns
-   a function that can be called to shutdown the observer."
-  [directory-seq-atom interval]
-
-  )

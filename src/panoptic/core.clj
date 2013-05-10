@@ -1,29 +1,9 @@
 (ns 
   panoptic.core
   (:use [potemkin :only [import-vars]])
-  (:require [panoptic.watcher :as w]
+  (:require [panoptic.watchers.file :as wf]
             [panoptic.file :as f]
             [panoptic.checkers :as check]))
-
-;; ## Import
-
-(import-vars
-  [panoptic.watcher 
-   
-   observable-files
-   add-observable-file
-   on-create
-   on-delete
-   on-modify
-   start-watcher!
-   stop-watcher!]
-  
-  [panoptic.checkers
-   
-   last-modified
-   md5
-   sha1
-   sha256])
 
 ;; ## Concept
 ;;
@@ -43,6 +23,29 @@
 ;;
 ;; The initial interval given is the maximum time a file can go without being polled.
 
+;; ## Import
+
+(import-vars
+  [panoptic.watchers.core
+   
+   start-watcher!
+   stop-watcher!]
+
+  [panoptic.watchers.file
+   
+   observable-files
+   add-observable-file
+   on-create
+   on-delete
+   on-modify]
+  
+  [panoptic.checkers
+   
+   last-modified
+   md5
+   sha1
+   sha256])
+
 ;; ## Simple File Watcher
 ;;
 ;; Observes the given Files in a fixed interval.
@@ -51,4 +54,4 @@
   "Create a simple, single-threaded file watcher observing the given files 
    (which may not exist yet)."
   [file-observable]
-  (w/file-watcher file-observable))
+  (wf/file-watcher file-observable))
