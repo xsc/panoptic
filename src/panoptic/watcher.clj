@@ -2,7 +2,8 @@
       :author "Yannick Scherer"}
   panoptic.watcher
   (:require [panoptic.checkers :as c]
-            [panoptic.file :as f]))
+            [panoptic.file :as f]
+            [panoptic.utils :as u]))
 
 ;; ## Concept
 ;;
@@ -42,13 +43,6 @@
 
 ;; ## Watching Files
 
-(defn- sleep
-  "Sleep the given number of Milliseconds."
-  [interval]
-  (try
-    (Thread/sleep interval)
-    (catch Exception _ nil)))
-
 (defn run-file-watcher!
   "Create Watcher that checks the files contained in the given atom
    in a periodic fashion using the given checker and polling interval
@@ -61,7 +55,7 @@
                           (loop []
                             (when-not @stop?
                               (swap! file-seq-atom check!) 
-                              (sleep interval) 
+                              (u/sleep interval) 
                               (recur))))]
     (fn 
       ([] 

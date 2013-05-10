@@ -2,7 +2,8 @@
       :author "Yannick Scherer"}
   panoptic.file
   (:require [clj-time.core :as t]
-            [me.raynes.fs :as fs]))
+            [me.raynes.fs :as fs]
+            [panoptic.utils :as u]))
 
 ;; ## File Map
 ;;
@@ -64,10 +65,21 @@
 
 ;; ## Directory Map
 
+(defn- create-include-function
+  [exclude precondition]
+  (let [patterns (seq exclude)]
+    (cond (not (or patterns precondition)) (constantly true)
+          (and patterns precondition) #(and (precondition %) (not (u/match-some? patterns %)))
+          (and (not patterns) precondition) precondition
+          :else #(not (u/match-some? patterns %)))) )
+
 (defn directory
   "Create directory map from directory path and additional options."
-  [path & {:keys [extensions include-hidden]}] 
+  [path & {:keys [extensions include-hidden exclude exclude-dirs exclude-files] :as opts}] 
   (let [f (fs/file path)
+        include? (create-include-function exclude nil)
+        include-file? (create-include-function exclude-files include?)
+        include-dir? (create-include-function exclude-dirs include?)
         valid-extension? (if-not (seq extensions)
                            (constantly true)
                            (let [ext (set (map #(str "." (if (keyword? %) (name %) (str %))) extensions))]
@@ -75,13 +87,26 @@
     (when (and (fs/exists? f) (fs/directory? f))
       (let [path (fs/absolute-path f)
             children (fs/list-dir f)]
-      (-> {}
-        (assoc :path path)
-        (assoc :include-hidden include-hidden)
-        (assoc :extensions (set extensions))
-        (assoc :files (->> children
-                        (filter #(fs/file? (str path "/" %)))
-                        (filter valid-extension?)))
-        (assoc :directories (->> children
-                              (filter #(fs/directory? (str path "/" %)))
-                              (filter #(or include-hidden (not (.startsWith ^String % ".")))))))))))
+        (-> {}
+          (assoc :path path)
+          (assoc :opts opts)
+          (assoc :files 
+                 (->> children
+                   (filter #(fs/file? (str path "/" %)))
+                   (filter valid-extension?)
+                   (filter include-file?)))
+          (assoc :directories 
+                 (->> children
+                   (filter #(fs/directory? (str path "/" %)))
+                   (filter #(or include-hidden (not (.startsWith ^String % "."))))
+                   (filter include-dir?))))))))
+
+(defn directories
+  "Create seq of directories by recursively traversing the directory tree starting at
+   the given root path."
+  [root-path & opts]
+  (when-let [{:keys [path] :as d} (apply directory root-path opts)] 
+    (let [dirs (:directories d)] 
+      (if-not (seq dirs)
+        [d]
+        (cons d (mapcat #(apply directories (str path "/" %) opts) dirs))))))
