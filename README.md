@@ -6,6 +6,21 @@ __panoptic__ monitors single files or whole directories for changes.
 
 ## Usage
 
+```clojure
+(use 'panoptic.core)
+
+(def log-watcher
+  (-> (simple-file-watcher ["log.txt" "errors.txt"])
+    (on-create #(println (:path %) "was created."))
+    (on-delete #(println (:path %) "was deleted."))
+    (on-modify #(println (:path %) "was modified."))
+    (start-watcher!)))
+
+...
+
+(stop-watcher! log-watcher)
+```
+
 FIXME
 
 ## License

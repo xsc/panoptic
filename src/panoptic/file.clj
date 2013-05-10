@@ -33,7 +33,7 @@
   "Set `:deleted` data in File Map, update timestamp and checksum."
   [f]
   (-> f
-    (dissoc :created :modified)
+    (dissoc :created :modified :missing )
     (assoc :deleted true) 
     (dissoc :checksum)
     (update-timestamp)))
@@ -42,7 +42,7 @@
   "Set `:created` data in File Map, update timestamp and checksum."
   [f checksum]
   (-> f
-    (dissoc :deleted :modified)
+    (dissoc :deleted :modified :missing )
     (assoc :created true)
     (assoc :checksum checksum)
     (update-timestamp)))
@@ -51,16 +51,24 @@
   "Set `:modified` data in File Map, update timestamp and checksum."
   [f checksum]
   (-> f
-    (dissoc :created :deleted)
+    (dissoc :created :deleted :missing)
     (assoc :modified true)
     (assoc :checksum checksum)
     (update-timestamp)))
 
-(defn set-file-untouched
-  "Clear all `:deleted`, `:modified` and `:created` data in File Map, update timestamp."
+(defn set-file-missing
   [f]
   (-> f
     (dissoc :created :deleted :modified)
+    (assoc :missing true)
+    (update-timestamp)))
+
+(defn set-file-untouched
+  "Clear all `:deleted`, `:modified` and `:created` data in File Map, update timestamp."
+  [f checksum]
+  (-> f
+    (dissoc :created :deleted :modified :missing)
+    (assoc :checksum checksum)
     (update-timestamp)))
 
 ;; ## Directory Map
@@ -110,3 +118,11 @@
       (if-not (seq dirs)
         [d]
         (cons d (mapcat #(apply directories (str path "/" %) opts) dirs))))))
+
+(defn set-directory-deleted
+  "Set `:deleted` data in directory map."
+  [dir]
+  (-> dir
+    (dissoc :created :modified)
+    (assoc :deleted true)
+    (update-timestamp)))
