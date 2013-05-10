@@ -26,8 +26,8 @@ __REPL__
     (on-modify #(println (:path %) "was modified."))))
 
 (def watcher
-  (-> (simple-file-watcher files)
-    (start-watcher! :interval 500 :checker last-modified)))
+  (-> (simple-file-watcher files :interval 55 :checker md5)
+    (start-watcher!)))
 
 ...
 

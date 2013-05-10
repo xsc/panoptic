@@ -10,5 +10,9 @@
   (stop-watcher! [this] "Stop Watcher."))
 
 (defn start-watcher!
-  [w & opts]
-  (start-watcher!* w (apply hash-map opts)))
+  [w]
+  (start-watcher!* w))
+
+(defn stop-watcher!
+  [w]
+  (stop-watcher!* w))

@@ -33,6 +33,8 @@
 
   [panoptic.watchers.file
    
+   simple-file-watcher
+
    observable-files
    add-observable-file
    on-create
@@ -45,13 +47,3 @@
    md5
    sha1
    sha256])
-
-;; ## Simple File Watcher
-;;
-;; Observes the given Files in a fixed interval.
-
-(defn simple-file-watcher
-  "Create a simple, single-threaded file watcher observing the given files 
-   (which may not exist yet)."
-  [file-observable]
-  (wf/file-watcher file-observable))

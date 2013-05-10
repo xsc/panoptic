@@ -81,16 +81,19 @@
        (when (= ::timeout (deref observer-thread cancel-after-milliseconds ::timeout))
          (future-cancel observer-thread))))))
 
-;; ### FileWatcher Type
+;; ### Simple File Watcher
 
-(deftype FileWatcher [file-observable stop-fn-atom]
+(deftype SimpleFileWatcher [file-observable stop-fn-atom interval checker]
   Watcher
-  (start-watcher!* [this {:keys [interval checker]}]
+  (start-watcher!* [this]
     (swap! stop-fn-atom
            (fn [stop]
-             (or stop (run-file-watcher! file-observable (or checker c/last-modified) (or interval 1000)))))
+             (or stop (run-file-watcher! 
+                        file-observable 
+                        (or checker c/last-modified) 
+                        (or interval 1000)))))
     this)
-  (stop-watcher! [this]
+  (stop-watcher!* [this]
     (swap! stop-fn-atom
            (fn [stop]
              (when stop (stop))
@@ -101,7 +104,8 @@
   (toString [this]
     (.toString file-observable)))
 
-(defn file-watcher
-  "Create new FileWatcher."
-  [file-observable]
-  (FileWatcher. file-observable (atom nil)))
+(defn simple-file-watcher
+  "Create a simple, single-threaded file watcher observing the given files 
+   (which may not exist yet)."
+  [file-observable & {:keys [interval checker]}]
+  (SimpleFileWatcher. file-observable (atom nil) interval checker))
