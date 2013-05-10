@@ -44,6 +44,8 @@
 ;; The initial interval given is the maximum time a file can go without being polled.
 
 ;; ## Simple File Watcher
+;;
+;; Observes the given Files in a fixed interval.
 
 (defn simple-file-watcher
   "Create a simple, single-threaded file watcher observing the given files 
