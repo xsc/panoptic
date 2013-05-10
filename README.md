@@ -20,11 +20,12 @@ __REPL__
 (use 'panoptic.core)
 
 (def log-watcher
-  (-> (simple-file-watcher ["log.txt" "errors.txt"])
+  (-> (observable-files ["test.txt"])
     (on-create #(println (:path %) "was created."))
     (on-delete #(println (:path %) "was deleted."))
     (on-modify #(println (:path %) "was modified."))
-    (start-watcher!)))
+    (simple-file-watcher)
+    (start-watcher! :interval 500 :checker last-modified)))
 
 ...
 

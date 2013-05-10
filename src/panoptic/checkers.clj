@@ -19,7 +19,7 @@
 
 ;; ## Last-Modified Checker
 
-(defn by-modification-time
+(defn last-modified
   "Checker that returns the time of the last modification for a file."
   [path]
   (when (fs/exists? path)
@@ -32,16 +32,17 @@
    created from the given path."
   [f]
   (fn [path]
-    (f (fs/file path))))
+    (when (fs/exists? path)
+      (f (fs/file path)))))
 
-(def by-md5-checksum 
+(def md5 
   "Checker that returns the MD5 checksum of a file."
   (create-digest-fn cs/md5))
 
-(def by-sha1-checksum 
+(def sha1 
   "Checker that returns the SHA-1 checksum of a file."
   (create-digest-fn cs/sha-1))
 
-(def by-sha256-checksum 
+(def sha256 
   "Checker that returns the SHA-265 checksum of a file."
   (create-digest-fn cs/sha-256))

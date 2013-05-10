@@ -1,8 +1,29 @@
 (ns 
   panoptic.core
+  (:use [potemkin :only [import-vars]])
   (:require [panoptic.watcher :as w]
             [panoptic.file :as f]
             [panoptic.checkers :as check]))
+
+;; ## Import
+
+(import-vars
+  [panoptic.watcher 
+   
+   observable-files
+   add-observable-file
+   on-create
+   on-delete
+   on-modify
+   start-watcher!
+   stop-watcher!]
+  
+  [panoptic.checkers
+   
+   last-modified
+   md5
+   sha1
+   sha256])
 
 ;; ## Concept
 ;;
@@ -22,42 +43,10 @@
 ;;
 ;; The initial interval given is the maximum time a file can go without being polled.
 
-;; ## Wrappers
-
-(defn start-watcher!
-  "Start the given Watcher."
-  [watcher]
-  (w/start-watcher! watcher))
-
-(defn stop-watcher!
-  "Stop the given Watcher."
-  [watcher]
-  (w/stop-watcher! watcher))
-
-(defn on-create
-  "Add creation handler to Watcher."
-  [watcher f]
-  (w/on-create watcher f))
-
-(defn on-delete
-  "Add deletion handler to Watcher."
-  [watcher f]
-  (w/on-delete watcher f))
-
-(defn on-modify
-  "Add modification handler to Watcher."
-  [watcher f]
-  (w/on-modify watcher f))
-
 ;; ## Simple File Watcher
 
 (defn simple-file-watcher
   "Create a simple, single-threaded file watcher observing the given files 
    (which may not exist yet)."
-  [files & {:keys [check interval]}]
-  (let [files (if (string? files) [files] files)
-        file-atom (atom (map f/file files))]
-    (w/file-watcher 
-      file-atom 
-      (or check check/by-modification-time) 
-      (or interval 1000))))
+  [file-observable]
+  (w/file-watcher file-observable))

@@ -3,38 +3,52 @@
   panoptic.watcher
   (:require [panoptic.checkers :as c]
             [panoptic.file :as f]
-            [panoptic.utils :as u]))
+            [panoptic.utils :as u]
+            [panoptic.observable :as o]))
 
-;; ## Concept
-;;
-;; Observing Files is done using the premise that changes occur in batches not
-;; distributed over a large amount of time. We will thus have multiple threads
-;; watching different sets of files, running their update mechanisms in different
-;; intervals. 
-;;
-;; Files will be upgraded and downgraded according to the frequency changes were
-;; observed. Every observer should have the same number of files to watch, meaning
-;; that open spaces will be filled randomly with files of other priorities, having
-;; them shuffled periodically between observers.
+;; ## Observable Entities
 
-;; ## Protocol
+;; ### Container
+
+(defn observable-files
+  "Create new Observable container containing the given files."
+  ([] (observable-files []))
+  ([paths] 
+   (o/observable-atom (vec (map f/file paths)))))
+
+(defn add-observable-file
+  [file-observable path]
+  (o/observable-swap! file-observable #(conj (vec %1) (f/file path))))
+
+;; ### Handlers
+
+(defn- on-flag-set
+  "Attach Handler to File Observable that is called when the given map entry is set."
+  [flag file-observable f]
+  (o/add-result-handler 
+    file-observable
+    (fn [sq]
+      (doseq [file (filter flag sq)]
+        (f file)))))
+
+(def on-create (partial on-flag-set :created))
+(def on-delete (partial on-flag-set :deleted))
+(def on-modify (partial on-flag-set :modified))
+
+;; ## Watcher Protocol
 
 (defprotocol Watcher
-  "Protocol for Watchers."
-  (start-watcher! [this]
-    "Start the Watcher.")
-  (stop-watcher! [this]
-    "Stop the Watcher.")
-  (on-create [this f]
-    "Add handler for entity creation.")
-  (on-delete [this f]
-    "Add handler for entity deletion.") 
-  (on-modify [this f]
-    "Add handler for entity modification.")) 
+  "Protocol for Watcher."
+  (start-watcher!* [this opts] "Start Watcher.")
+  (stop-watcher! [this] "Stop Watcher."))
+
+(defn start-watcher!
+  [w & opts]
+  (start-watcher!* w (apply hash-map opts)))
 
 ;; ## FileWatcher
 
-;; ### Helpers
+;; ### Observation Logic
 
 (defn- check-file
   "Check a file (given as a file map) for changes using the given checker. Returns
@@ -46,32 +60,26 @@
       (condp = [checksum chk]
         [nil nil] (f/set-file-missing f)
         [chk chk] (f/set-file-untouched f chk)
-        [nil chk] (if (:missing f) (f/set-file-created f chk) (f/set-file-untouched f chk)) 
+        [nil chk] (if (:missing f) ;; this prevents creation notifications on startup
+                    (f/set-file-created f chk) 
+                    (f/set-file-untouched f chk)) 
         [checksum nil] (f/set-file-deleted f)
         (f/set-file-modified f chk)))
     (catch Exception ex
       (f/set-file-untouched f checksum))))
 
-(defn check-files
-  "Check seq of file maps for changes, returns an updated seq."
-  [checker files]
-  (let [check! (partial check-file checker)]
-    (doall (keep #(when % (check! %)) files))))
-
-;; ### Run File Watcher
-
-(defn- run-file-watcher!
+(defn run-file-watcher!
   "Create Watcher that checks the files contained in the given atom
    in a periodic fashion using the given checker and polling interval
    in milliseconds. Returns a function that can be called to shutdown
    the observer."
-  [file-seq-atom checker interval]
+  [file-observable checker interval]
   (let [stop? (atom nil)
-        check! (partial check-files checker)
+        check! (partial check-file checker)
         observer-thread (future
                           (loop []
                             (when-not @stop?
-                              (swap! file-seq-atom check!) 
+                              (o/observe! file-observable check!) 
                               (u/sleep interval) 
                               (recur))))]
     (fn 
@@ -83,55 +91,30 @@
        (when (= ::timeout (deref observer-thread cancel-after-milliseconds ::timeout))
          (future-cancel observer-thread))))))
 
-;; ### File Watcher Type
+;; ### FileWatcher Type
 
-(defn- attach-file-handlers
-  "Attach Handlers to an Atom containing a seq of file maps."
-  [file-atom k {:keys [on-create on-modify on-delete] :as h}]
-  (add-watch file-atom k
-             (fn [_ _ _ files]
-               (doseq [{:keys [created modified deleted] :as f} files]
-                 (try
-                   (cond (and on-create created) (doseq [c on-create] (c f))
-                         (and on-delete deleted) (doseq [c on-delete] (c f))
-                         (and on-modify modified) (doseq [c on-modify] (c f))
-                         :else nil)
-                   (catch Exception _ nil))))))
-
-(deftype FileWatcher [file-seq-atom checker interval handlers stop-fn]
+(deftype FileWatcher [file-observable stop-fn-atom]
   Watcher
-  (start-watcher! [this]
-    (attach-file-handlers file-seq-atom ::watcher handlers)
-    (FileWatcher. 
-      file-seq-atom checker interval handlers
-      (run-file-watcher! file-seq-atom checker interval)))
+  (start-watcher!* [this {:keys [interval checker]}]
+    (swap! stop-fn-atom
+           (fn [stop]
+             (or stop (run-file-watcher! file-observable (or checker c/last-modified) (or interval 1000)))))
+    this)
   (stop-watcher! [this]
-    (or
-      (when stop-fn 
-        (stop-fn)
-        (remove-watch file-seq-atom ::watcher)
-        (FileWatcher.  file-seq-atom checker interval handlers nil))
-      this))
-  (on-create [this f]
-    (FileWatcher. 
-      file-seq-atom checker interval
-      (update-in handlers [:on-create] #(conj (vec %1) %2) f)
-      stop-fn))
-  (on-delete [this f]
-    (FileWatcher. 
-      file-seq-atom checker interval
-      (update-in handlers [:on-delete] #(conj (vec %1) %2) f)
-      stop-fn))
-  (on-modify [this f]
-    (FileWatcher. 
-      file-seq-atom checker interval
-      (update-in handlers [:on-modify] #(conj (vec %1) %2) f)
-      stop-fn)))
+    (swap! stop-fn-atom
+           (fn [stop]
+             (when stop (stop))
+             nil))
+    this)
+
+  Object 
+  (toString [this]
+    (.toString file-observable)))
 
 (defn file-watcher
-  "Create new File Watcher."
-  [file-seq-atom checker interval]
-  (FileWatcher. file-seq-atom checker interval {} nil))
+  "Create new FileWatcher."
+  [file-observable]
+  (FileWatcher. file-observable (atom nil)))
 
 ;; ## Watching Directories
 
