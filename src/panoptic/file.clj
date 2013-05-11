@@ -111,6 +111,10 @@
                    (filter include-dir?)
                    (set))))))))
 
+(defn refresh-directory
+  [{:keys [path opts]}]
+  (apply directory path opts))
+
 (defn directories
   "Create seq of directories by recursively traversing the directory tree starting at
    the given root path."

@@ -2,19 +2,30 @@
       :author "Yannick Scherer"}
   panoptic.watchers.directory
   (:use panoptic.watchers.core)
-  (:require [panoptic.checkers :as c]
+  (:require [clojure.set :as s :only [difference]]
+            [panoptic.checkers :as c]
             [panoptic.file :as f]
-            [panoptic.utils :as u]
-            [panoptic.observable :as o]))
+            [panoptic.utils :as u]))
+
+;; ## Protocol
+
+(defprotocol DirectoryWatcher
+  "Protocol for Directory Watchers."
+  (wrap-directory-handler [this f]))
 
 ;; ## Watching Directories
 
-(defn- check-directory
+(defn check-directory
   "Check the given directory for new files/subdirectories, returning `nil` if it was deleted."
-  [{:keys [path files include-hidden extensions directories] :as dir}]
-  (if-let [d (f/directory path :extensions extensions :include-hidden include-hidden)]
-    nil
-    (f/set-directory-deleted dir)))
+  [d0]
+  (if-let [d (f/refresh-directory d0)]
+    (let [new-files (s/difference (:files d) (:files d0))
+          new-directories (s/difference (:directories d) (:directories d0))
+          deleted-files (s/difference (:files d0) (:files d))
+          deleted-directories (s/difference (:directories d0) (:directories d))]
+      (prn deleted-files) 
+      d)
+    (f/set-directory-deleted d0)))
 
 (defn run-directory-watcher!
   "Create Watcher that checks the directories contained in the given
