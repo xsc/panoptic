@@ -3,7 +3,7 @@
   panoptic.watchers.core
   (:require [panoptic.utils :as u]))
 
-;; ## Concept
+;; ## Premises
 ;;
 ;; A watcher shall be able to handle a new set of entities on demand. It
 ;; should be able to attach entity watchers to it dynamically, e.g. when

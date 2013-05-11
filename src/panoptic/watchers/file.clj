@@ -9,6 +9,8 @@
 ;; ## File Handlers
 
 (defn- on-flag-set
+  "Add entity handler to watcher that fires if a given flag is set
+   in the file map."
   [flag watcher f]
   (wrap-entity-handler!
     watcher
