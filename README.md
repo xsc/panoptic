@@ -2,6 +2,7 @@
 
 __panoptic__ monitors single files or whole directories for changes.
 
+[![Build Status](https://travis-ci.org/xsc/panoptic.png)](https://travis-ci.org/xsc/panoptic)
 [![endorse](https://api.coderwall.com/xsc/endorsecount.png)](https://coderwall.com/xsc)
 
 This is only for playing around for now. But much more functionality can be expected.
