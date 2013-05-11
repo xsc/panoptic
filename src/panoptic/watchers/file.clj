@@ -122,14 +122,25 @@
       (add-watch file-seq-atom ::watch (fn [_ _ _ v] (distribute-files v child-atoms)))
       (distribute-files @file-seq-atom child-atoms)
       (let [stop-fns (doall (map start-watcher! child-watchers))]
-        (fn []
-          (future
-            (->> stop-fns
-              (map (fn [f] (try (f) (catch Exception _ nil))))
-              (map deref)
-              (doall))))))))
+        (fn 
+          ([] 
+           (remove-watch file-seq-atom ::watch)
+           (future
+             (->> stop-fns
+               (map (fn [f] (try (f) (catch Exception _ nil))))
+               (doall)
+               (map deref)
+               (doall))))
+          ([cancel-after-milliseconds] 
+           (remove-watch file-seq-atom ::watch)
+           (future
+             (->> stop-fns
+               (map (fn [f] (try (f cancel-after-milliseconds) (catch Exception _ nil))))
+               (map deref)
+               (doall)))))))))
 
 (defn multi-threaded-file-watcher
+  "Create multi-threaded File Watcher."
   [n files & {:keys [interval checker]}]
   (MultiThreadedFileWatcher.
     n
