@@ -28,12 +28,12 @@
 (import-vars
   [panoptic.watchers.core
    
-   start-watcher!
-   stop-watcher!]
+   start-watcher!]
 
   [panoptic.watchers.file
    
    simple-file-watcher
+   multi-threaded-file-watcher
 
    on-create
    on-delete
