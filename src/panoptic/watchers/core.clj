@@ -17,6 +17,8 @@
     "Add Entities to Watch List.")
   (unwatch-entities! [this es]
     "Remove Entities from Watch List.")
+  (watched-entities [this]
+    "Get current entity map.")
   (start-watcher! [this]
     "Start Watcher Loop.")
   (stop-watcher! [this]
@@ -73,6 +75,8 @@
   (unwatch-entities! [this es]
     (swap! entities #(reduce dissoc % es))
     this)
+  (watched-entities [this]
+    @entities)
   (start-watcher! [this]
     (swap! stop-fn #(or % (run-watcher! watch-fn interval entities handler)))
     this)

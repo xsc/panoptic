@@ -7,4 +7,6 @@
                  [potemkin "0.2.2"]
                  [me.raynes/fs "1.4.0"]
                  [digest "1.4.3"]
-                 [clj-time "0.5.0"]])
+                 [clj-time "0.5.0"]]
+  :profiles {:dev {:dependencies [[midje "1.5.1"]]
+                   :plugins [[lein-midje "3.0.1"]]}})
