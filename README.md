@@ -20,7 +20,7 @@ __REPL__
 (use 'panoptic.core)
 
 (def watcher
-  (-> (simple-file-watcher ["test.txt"])
+  (-> (simple-file-watcher ["error.txt" "test.txt"])
     (on-file-modify #(println (:path %) "changed"))
     (on-file-create #(println (:path %) "created"))
     (on-file-delete #(println (:path %) "deleted"))
@@ -28,7 +28,7 @@ __REPL__
 
 ...
 
-@(watcher)
+@(stop-watcher! watcher)
 ```
 
 ## License
