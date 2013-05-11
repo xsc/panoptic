@@ -23,9 +23,9 @@
         (when (get file flag)
           (f file))))))
 
-(def on-create (partial on-flag-set :created))
-(def on-delete (partial on-flag-set :deleted))
-(def on-modify (partial on-flag-set :modified))
+(def on-file-create (partial on-flag-set :created))
+(def on-file-delete (partial on-flag-set :deleted))
+(def on-file-modify (partial on-flag-set :modified))
 
 ;; ## Observation Logic
 

@@ -35,9 +35,9 @@
    simple-file-watcher
    multi-threaded-file-watcher
 
-   on-create
-   on-delete
-   on-modify]
+   on-file-create
+   on-file-delete
+   on-file-modify]
   
   [panoptic.checkers
    

@@ -20,10 +20,10 @@ __REPL__
 (use 'panoptic.core)
 
 (def watcher
-  (-> (simple-file-watcher ["/git/public/panoptic/test.txt"])
-    (on-modify #(println (:path %) "changed"))
-    (on-create #(println (:path %) "created"))
-    (on-delete #(println (:path %) "deleted"))
+  (-> (simple-file-watcher ["test.txt"])
+    (on-file-modify #(println (:path %) "changed"))
+    (on-file-create #(println (:path %) "created"))
+    (on-file-delete #(println (:path %) "deleted"))
     (start-watcher!)))
 
 ...
