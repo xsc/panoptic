@@ -35,8 +35,6 @@
    
    simple-file-watcher
 
-   observable-files
-   add-observable-file
    on-create
    on-delete
    on-modify]

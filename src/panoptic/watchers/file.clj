@@ -7,43 +7,31 @@
             [panoptic.utils :as u]
             [panoptic.observable :as o]))
 
-;; ## Observable Entities
+;; ## Protocol
 
-;; ### Container
-
-(defn observable-files
-  "Create new Observable container containing the given files."
-  ([] (observable-files []))
-  ([paths] 
-   (o/observable-atom (vec (map f/file paths)))))
-
-(defn add-observable-file
-  [file-observable path]
-  (o/observable-swap! file-observable #(conj (vec %1) (f/file path))))
-
-;; ### Handlers
+(defprotocol FileWatcher
+  "Protocol for File Watchers."
+  (wrap-file-handler [this f]))
 
 (defn- on-flag-set
-  "Attach Handler to File Observable that is called when the given map entry is set."
-  [flag file-observable f]
-  (o/add-result-handler 
-    file-observable
-    (fn [sq]
-      (doseq [file (filter flag sq)]
-        (f file)))))
+  [flag watcher f]
+  (wrap-file-handler 
+    watcher
+    (fn [h]
+      (fn [file]
+        (when h (h file)) 
+        (when (get file flag)
+          (f file))))))
 
 (def on-create (partial on-flag-set :created))
 (def on-delete (partial on-flag-set :deleted))
 (def on-modify (partial on-flag-set :modified))
 
-;; ## FileWatcher
-
-;; ### Observation Logic
+;; ## Observation Logic
 
 (defn- check-file
   "Check a file (given as a file map) for changes using the given checker. Returns
-   an updated file map or nil (if the checker returned `nil` and the file did not
-   have a checksum before)"
+   an updated file map."
   [checker {:keys [checked path checksum] :as f}]
   (try
     (let [chk (c/file-checksum checker path)]
@@ -60,52 +48,52 @@
 
 (defn run-file-watcher!
   "Create Watcher that checks the files contained in the given atom
-   in a periodic fashion using the given checker and polling interval
-   in milliseconds. Returns a function that can be called to shutdown
-   the observer."
-  [file-observable checker interval]
-  (let [stop? (atom nil)
-        check! (partial check-file checker)
-        observer-thread (future
-                          (loop []
-                            (when-not @stop?
-                              (o/observe! file-observable check!) 
-                              (u/sleep interval) 
-                              (recur))))]
-    (fn 
-      ([] 
-       (reset! stop? true) 
-       @observer-thread)
-      ([cancel-after-milliseconds]
-       (reset! stop? true)
-       (when (= ::timeout (deref observer-thread cancel-after-milliseconds ::timeout))
-         (future-cancel observer-thread))))))
+  in a periodic fashion using the given checker and polling interval
+  in milliseconds. Returns a function that can be called to shutdown
+  the observer (producing a future that can be waited for)."
+  ([file-seq-atom checker interval]
+   (run-file-watcher! file-seq-atom checker interval nil))
+  ([file-seq-atom checker interval handler] 
+   (let [stop? (atom nil)
+         check! (partial check-file checker)
+         observer-thread (future
+                           (loop []
+                             (when-not @stop?
+                               (swap! file-seq-atom 
+                                      #(doall
+                                         (keep 
+                                           (fn [x] 
+                                             (when x 
+                                               (when-let [f (check! x)]
+                                                 (when handler (handler f))
+                                                 f))) %))) 
+                               (u/sleep interval) 
+                               (recur))))]
+     (fn 
+       ([] 
+        (reset! stop? true) 
+        observer-thread)
+       ([cancel-after-milliseconds]
+        (reset! stop? true)
+        (future
+          (when (= ::timeout (deref observer-thread cancel-after-milliseconds ::timeout))
+            (future-cancel observer-thread))))))))
 
-;; ### Simple File Watcher
+;; ## Simple File Watcher
 
-(deftype SimpleFileWatcher [file-observable stop-fn-atom interval checker]
+(deftype SimpleFileWatcher [file-seq-atom checker interval handler]
+  FileWatcher
+  (wrap-file-handler [this f]
+    (SimpleFileWatcher. file-seq-atom checker interval (f handler)))
   Watcher
   (start-watcher!* [this]
-    (swap! stop-fn-atom
-           (fn [stop]
-             (or stop (run-file-watcher! 
-                        file-observable 
-                        (or checker c/last-modified) 
-                        (or interval 1000)))))
-    this)
-  (stop-watcher!* [this]
-    (swap! stop-fn-atom
-           (fn [stop]
-             (when stop (stop))
-             nil))
-    this)
-
-  Object 
-  (toString [this]
-    (.toString file-observable)))
+    (run-file-watcher! file-seq-atom checker interval handler)))
 
 (defn simple-file-watcher
-  "Create a simple, single-threaded file watcher observing the given files 
-   (which may not exist yet)."
-  [file-observable & {:keys [interval checker]}]
-  (SimpleFileWatcher. file-observable (atom nil) interval checker))
+  "Create single-threaded file watcher."
+  [files & {:keys [interval checker]}]
+  (SimpleFileWatcher.
+    (atom (map f/file files))
+    (or checker c/last-modified)
+    (or interval 1000)
+    nil))

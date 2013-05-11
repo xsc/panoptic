@@ -6,13 +6,9 @@
 
 (defprotocol Watcher
   "Protocol for Watcher."
-  (start-watcher!* [this opts] "Start Watcher.")
-  (stop-watcher! [this] "Stop Watcher."))
+  (start-watcher!* [this]
+    "Start Watcher. Should return a function that stops the watcher."))
 
 (defn start-watcher!
   [w]
   (start-watcher!* w))
-
-(defn stop-watcher!
-  [w]
-  (stop-watcher!* w))

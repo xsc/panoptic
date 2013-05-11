@@ -19,19 +19,16 @@ __REPL__
 ```clojure
 (use 'panoptic.core)
 
-(def files
-  (-> (observable-files ["test.txt"])
-    (on-create #(println (:path %) "was created."))
-    (on-delete #(println (:path %) "was deleted."))
-    (on-modify #(println (:path %) "was modified."))))
-
 (def watcher
-  (-> (simple-file-watcher files :interval 55 :checker md5)
+  (-> (simple-file-watcher ["/git/public/panoptic/test.txt"])
+    (on-modify #(println (:path %) "changed"))
+    (on-create #(println (:path %) "created"))
+    (on-delete #(println (:path %) "deleted"))
     (start-watcher!)))
 
 ...
 
-(stop-watcher! watcher)
+@(watcher)
 ```
 
 ## License
