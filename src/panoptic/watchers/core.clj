@@ -35,6 +35,19 @@
 
 ;; ## Watcher Logic
 
+(defn- run-entity-watcher!
+  "Run the given watcher function over the given entity map, using the given handler
+   function."
+  [watch-fn entities handler]
+  (->> entities
+    (keep 
+      (fn [[k x]]
+        (when x
+          (when-let [f (watch-fn x)]
+            (when handler (handler f))
+            [k f]))))
+    (into {})))
+
 (defn- run-watcher!
   "Run Watcher Loop"
   [watch-fn interval entities handler]
@@ -42,15 +55,7 @@
         watch-future (future
                        (loop []
                          (when-not @stop?
-                           (swap! entities
-                                  #(->> % 
-                                     (keep 
-                                       (fn [[k x]]
-                                         (when x
-                                           (when-let [f (watch-fn x)]
-                                             (when-let [h @handler] (h f))
-                                             [k f]))))
-                                     (into {})))
+                           (swap! entities #(run-entity-watcher! watch-fn % @handler))
                            (u/sleep interval)
                            (recur))))]
     (fn []
