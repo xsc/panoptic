@@ -2,6 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.data.directory
   (:require [me.raynes.fs :as fs]
+            [clojure.set :as s :only [difference]]
             [panoptic.utils :as u]))
 
 ;; ## Directory Map
@@ -66,3 +67,20 @@
     (dissoc :created :modified)
     (assoc :deleted true)
     (u/update-timestamp :checked)))
+
+(defn set-directory-diff
+  [old-dir new-dir]
+  (let [old-files (:files old-dir)
+        old-directories (:directories old-dir)
+        new-files (:files new-dir)
+        new-directories (:directories new-dir)
+        created-files (s/difference new-files old-files)
+        created-directories (s/difference new-directories old-directories)
+        deleted-files (s/difference old-files new-files)
+        deleted-directories (s/difference old-directories new-directories)]
+    (-> new-dir
+      (assoc :created-files created-files)
+      (assoc :deleted-files deleted-files)
+      (assoc :created-dirs created-directories)
+      (assoc :deleted-dirs deleted-directories)
+      (u/update-timestamp :checked))))

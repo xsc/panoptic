@@ -40,6 +40,15 @@
    on-file-delete
    on-file-modify]
   
+  [panoptic.watchers.directory
+   
+   simple-directory-watcher
+
+   on-directory-file-create
+   on-directory-file-delete
+   on-directory-create
+   on-directory-delete]
+  
   [panoptic.checkers
    
    last-modified

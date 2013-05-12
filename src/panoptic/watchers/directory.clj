@@ -7,30 +7,37 @@
             [panoptic.data.directory :as f]
             [panoptic.utils :as u]))
 
-;; ## Protocol
+;; ## Handlers
 
-(defprotocol DirectoryWatcher
-  "Protocol for Directory Watchers."
-  (wrap-directory-handler [this f]))
+(defn- on-changes
+  [k watcher f]
+  (wrap-entity-handler!
+    watcher
+    (fn [h]
+      (fn [& [w _ {:keys [path] :as d} :as args]]
+        (when h (apply h args))
+        (when-let [s (get d k)]
+          (when (seq s)
+            (doseq [entity s]
+              (f w d (str path "/" entity)))))))))
+
+(def on-directory-create (partial on-changes :created-dirs))
+(def on-directory-delete (partial on-changes :deleted-dirs))
+(def on-directory-file-create (partial on-changes :created-files))
+(def on-directory-file-delete (partial on-changes :deleted-files))
 
 ;; ## Watching Directories
 
-(defn check-directory
+(defn watch-directory
   "Check the given directory for new files/subdirectories, returning `nil` if it was deleted."
   [d0]
   (if-let [d (f/refresh-directory d0)]
-    (let [new-files (s/difference (:files d) (:files d0))
-          new-directories (s/difference (:directories d) (:directories d0))
-          deleted-files (s/difference (:files d0) (:files d))
-          deleted-directories (s/difference (:directories d0) (:directories d))]
-      (prn deleted-files) 
-      d)
+    (f/set-directory-diff d0 d)
     (f/set-directory-deleted d0)))
 
-(defn run-directory-watcher!
-  "Create Watcher that checks the directories contained in the given
-   atom in a periodic fashion, using the given polling interval. Returns
-   a function that can be called to shutdown the observer."
-  [directory-seq-atom interval]
-
-  )
+(defn simple-directory-watcher
+  "Create single-threaded directory watcher."
+  [directories & {:keys [interval] :as opts}]
+  (let [directories (if (string? directories) [directories] directories)]
+    (-> (generic-watcher watch-directory #(apply f/directory % opts) (or interval 1000))
+      (watch-entities! directories))))
