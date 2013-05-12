@@ -7,7 +7,7 @@
 
 (fact "about generic watchers"
   (let [a (atom 0)
-        w (generic-watcher (fn [_] @a) (constantly 0) 10)]
+        w (simple-watcher (fn [_] @a) #(assoc %1 %2 0) 10)]
     (watch-entities! w [:a :b]) => w
     (watched-entities w) => { :a 0 :b 0 }
     (start-watcher! w) => w
