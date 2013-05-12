@@ -38,7 +38,9 @@ __Watching Directories__
 (use 'panoptic.core)
 
 (def watcher
-  (-> (recursive-directory-watcher ["/path/to/directory"])
+  (-> (simple-directory-watcher ["/path/to/directory"] 
+        :recursive true 
+        :extensions [:clj])
     (on-directory-create #(println "Directory" %3 "created"))
     (on-directory-delete #(println "Directory" %3 "deleted"))
     (on-directory-file-create #(println "File" %3 "created"))
