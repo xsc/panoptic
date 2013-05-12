@@ -15,7 +15,7 @@ __Leiningen__ ([via Clojars](https://clojars.org/panoptic))
 [panoptic "0.1.0-SNAPSHOT"]
 ```
 
-__REPL__
+__Watching (possibly non-existing) Files__
 
 ```clojure
 (use 'panoptic.core)
@@ -25,6 +25,24 @@ __REPL__
     (on-file-modify #(println (:path %3) "changed"))
     (on-file-create #(println (:path %3) "created"))
     (on-file-delete #(println (:path %3) "deleted"))
+    (start-watcher!)))
+
+...
+
+@(stop-watcher! watcher)
+```
+
+__Watching Directories__
+
+```clojure
+(use 'panoptic.core)
+
+(def watcher
+  (-> (recursive-directory-watcher ["/path/to/directory"])
+    (on-directory-create #(println "Directory" %3 "created"))
+    (on-directory-delete #(println "Directory" %3 "deleted"))
+    (on-directory-file-create #(println "File" %3 "created"))
+    (on-directory-file-delete #(println "File" %3 "deleted"))
     (start-watcher!)))
 
 ...
