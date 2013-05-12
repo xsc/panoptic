@@ -1,6 +1,7 @@
 (ns ^{:doc "Watcher Basics"
       :author "Yannick Scherer"}
   panoptic.watchers.core
+  (:use [clojure.tools.logging :only [debug info warn error]])
   (:require [panoptic.utils :as u]))
 
 ;; ## Premises
@@ -40,24 +41,32 @@
 (defn- run-entity-watcher!
   "Run the given watcher function over the given entity map, using the given handler
    function."
-  [watch-fn entities handler]
+  [w watch-fn entities handler]
   (->> entities
     (keep 
       (fn [[k x]]
         (when x
-          (when-let [f (watch-fn x)]
-            (when handler (handler f))
+          (when-let [f (try
+                         (watch-fn x)
+                         (catch Exception ex
+                           (error ex "when calling watch function for entity" k)))]
+            (when handler 
+              (future 
+                (try
+                  (handler w k f)
+                  (catch Exception ex 
+                    (error ex "when calling handler for entity" k)))))
             [k f]))))
     (into {})))
 
 (defn- run-watcher!
   "Run Watcher Loop"
-  [watch-fn interval entities handler]
+  [w watch-fn interval entities handler]
   (let [stop? (atom false)
         watch-future (future
                        (loop []
                          (when-not @stop?
-                           (swap! entities #(run-entity-watcher! watch-fn % @handler))
+                           (swap! entities #(run-entity-watcher! w watch-fn % @handler))
                            (u/sleep interval)
                            (recur))))]
     (fn []
@@ -78,7 +87,7 @@
   (watched-entities [this]
     @entities)
   (start-watcher! [this]
-    (swap! stop-fn #(or % (run-watcher! watch-fn interval entities handler)))
+    (swap! stop-fn #(or % (run-watcher! this watch-fn interval entities handler)))
     this)
   (stop-watcher! [this]
     (when-let [f @stop-fn]

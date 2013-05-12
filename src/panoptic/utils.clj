@@ -1,6 +1,18 @@
 (ns ^{:doc "Utility Functions"
       :author "Yannick Scherer"}
-  panoptic.utils)
+  panoptic.utils
+  (:require [clj-time.core :as t]))
+
+(let [E (t/epoch)]
+  (defn unix-timestamp
+    "Get Unix Timestamp in Milliseconds"
+    []
+    (t/in-msecs (t/interval E (t/now))))) 
+
+(defn update-timestamp
+  "Update k timestamp in map."
+  [f k] 
+  (assoc f k (unix-timestamp)))
 
 (defn match?
   "Check if the given String matches the given Pattern."

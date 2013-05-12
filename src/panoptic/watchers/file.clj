@@ -1,9 +1,10 @@
 (ns ^{:doc "File Watchers"
       :author "Yannick Scherer"}
   panoptic.watchers.file
-  (:use panoptic.watchers.core)
+  (:use panoptic.watchers.core
+        [clojure.tools.logging :only [error]])
   (:require [panoptic.checkers :as c]
-            [panoptic.file :as f]
+            [panoptic.data.file :as f]
             [panoptic.utils :as u]))
 
 ;; ## File Handlers
@@ -15,10 +16,10 @@
   (wrap-entity-handler!
     watcher
     (fn [h]
-      (fn [file]
-        (when h (h file)) 
+      (fn [& [_ _ file :as args]]
+        (when h (apply h args)) 
         (when (get file flag)
-          (f file))))))
+          (apply f args))))))
 
 (def on-file-create (partial on-flag-set :created))
 (def on-file-delete (partial on-flag-set :deleted))
@@ -41,6 +42,7 @@
         [checksum nil] (f/set-file-deleted f)
         (f/set-file-modified f chk)))
     (catch Exception ex
+      (error ex "in file checker for file" path)
       (f/set-file-untouched f checksum))))
 
 ;; ## Simple File Watcher

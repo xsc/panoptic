@@ -22,7 +22,7 @@
 (defn last-modified
   "Checker that returns the time of the last modification for a file."
   [path]
-  (when (fs/exists? path)
+  (when (and (fs/exists? path) (fs/file? path)) 
     (fs/mod-time path)))
 
 ;; ## Checksum Checkers

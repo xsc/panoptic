@@ -1,9 +1,10 @@
-(ns 
+(ns ^{:doc "Panoptic API Facade."
+      :author "Yannick Scherer"}
   panoptic.core
   (:use [potemkin :only [import-vars]])
-  (:require [panoptic.watchers.file :as wf]
-            [panoptic.file :as f]
-            [panoptic.checkers :as check]))
+  (:require [panoptic.watchers core file directory]
+            [panoptic.data file directory]
+            panoptic.checkers))
 
 ;; ## Concept
 ;;

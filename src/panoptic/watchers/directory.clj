@@ -4,7 +4,7 @@
   (:use panoptic.watchers.core)
   (:require [clojure.set :as s :only [difference]]
             [panoptic.checkers :as c]
-            [panoptic.file :as f]
+            [panoptic.data.directory :as f]
             [panoptic.utils :as u]))
 
 ;; ## Protocol
