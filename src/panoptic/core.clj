@@ -29,6 +29,11 @@
 (import-vars
   [panoptic.watchers.core
    
+   wrap-entity-handler!
+   watch-entities!
+   watch-entity!
+   unwatch-entity!
+   unwatch-entities!
    start-watcher!
    stop-watcher!]
 
@@ -43,6 +48,7 @@
   [panoptic.watchers.directory
    
    simple-directory-watcher
+   recursive-directory-watcher
 
    on-directory-file-create
    on-directory-file-delete

@@ -73,13 +73,13 @@
       (reset! stop? true)
       watch-future)))
 
-(deftype GenericWatcher [watch-fn entity-fn interval entities handler stop-fn]
+(deftype SimpleWatcher [watch-fn add-entity-fn interval entities handler stop-fn]
   Watcher
   (wrap-entity-handler! [this f]
     (when f (swap! handler f))
     this)
   (watch-entities! [this es]
-    (swap! entities #(reduce (fn [m e] (assoc m e (entity-fn e))) % es))
+    (swap! entities #(reduce (fn [m e] (or (add-entity-fn m e) m)) % es))
     this)
   (unwatch-entities! [this es]
     (swap! entities #(reduce dissoc % es))
@@ -98,8 +98,8 @@
   (toString [this]
     (pr-str @entities)))
 
-(defn generic-watcher
+(defn simple-watcher
   "Create generic, single-threaded Watcher using a watch function and an entity 
    creation function."
-  [watch-fn entity-fn interval]
-  (GenericWatcher. watch-fn entity-fn interval (atom {}) (atom nil) (atom nil)))
+  [watch-fn add-entity-fn interval]
+  (SimpleWatcher. watch-fn add-entity-fn interval (atom {}) (atom nil) (atom nil)))

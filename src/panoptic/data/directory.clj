@@ -17,8 +17,9 @@
 
 (defn directory
   "Create directory map from directory path and additional options."
-  [path & {:keys [extensions include-hidden exclude exclude-dirs exclude-files] :as opts}] 
-  (let [f (fs/file path)
+  [path & opts ] 
+  (let [f (fs/file path) 
+        {:keys [extensions include-hidden exclude exclude-dirs exclude-files]} (apply hash-map opts)
         include? (create-include-function exclude nil)
         include-file? (create-include-function exclude-files include?)
         include-dir? (create-include-function exclude-dirs include?)
@@ -59,6 +60,8 @@
       (if-not (seq dirs)
         [d]
         (cons d (mapcat #(apply directories (str path "/" %) opts) dirs))))))
+
+;; ## Directory Checking
 
 (defn set-directory-deleted
   "Set `:deleted` data in directory map."

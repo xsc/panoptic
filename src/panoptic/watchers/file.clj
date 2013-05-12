@@ -51,8 +51,10 @@
   "Create single-threaded file watcher."
   [files & {:keys [interval checker]}]
   (let [files (if (string? files) [files] files)]
-    (-> (generic-watcher 
+    (-> (simple-watcher 
           (partial watch-file (or checker c/last-modified))
-          f/file
+          (fn [m path]
+            (when-let [f (f/file path)]
+              (assoc m (:path f) f)))
           (or interval 1000))
       (watch-entities! files))))
