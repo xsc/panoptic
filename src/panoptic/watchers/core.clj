@@ -99,7 +99,9 @@
     (pr-str @entities)))
 
 (defn simple-watcher
-  "Create generic, single-threaded Watcher using a watch function and an entity 
-   creation function."
+  "Create generic, single-threaded Watcher using: 
+   - a watch function (transform an input entity to create the new state of the entity)
+   - an entity-add function (gets a map and an entity and updates the entity map)
+   - the watch loop interval in milliseconds."
   [watch-fn add-entity-fn interval]
   (SimpleWatcher. watch-fn add-entity-fn interval (atom {}) (atom nil) (atom nil)))
