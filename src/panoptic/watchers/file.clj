@@ -70,8 +70,7 @@
     (start-watcher! internal-watcher)
     this)
   (stop-watcher! [this] 
-    (stop-watcher! internal-watcher)
-    this)
+    (stop-watcher! internal-watcher))
   (watch-entities! [this es] 
     (watch-entities! internal-watcher es)
     this)

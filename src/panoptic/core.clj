@@ -48,7 +48,6 @@
   [panoptic.watchers.directory
    
    simple-directory-watcher
-   recursive-directory-watcher
 
    on-directory-file-create
    on-directory-file-delete

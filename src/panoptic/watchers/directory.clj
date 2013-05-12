@@ -15,10 +15,6 @@
   (on-directory-file-create [this f])
   (on-directory-file-delete [this f])) 
 
-;; ## Handlers
-
-
-
 ;; ## Watching Directories
 
 (defn- watch-directory
@@ -52,8 +48,7 @@
     (start-watcher! internal-watcher)
     this)
   (stop-watcher! [this] 
-    (stop-watcher! internal-watcher)
-    this)
+    (stop-watcher! internal-watcher))
   (watch-entities! [this es]
     (watch-entities! internal-watcher es)
     this)
@@ -79,38 +74,41 @@
   (toString [_]
     (.toString internal-watcher)))
 
+(defn- create-recursive-directory-watcher
+  [interval opts]
+  "Create recursive directory watcher."
+  (->
+    (SimpleDirectoryWatcher.
+      (simple-watcher 
+        watch-directory 
+        (fn [m path]
+          (when-let [ds (apply f/directories path opts)]
+            (reduce #(assoc %1 (:path %2) %2) m ds)))
+        (or interval 1000)))
+    (on-directory-create 
+      (fn [w _ path]
+        (watch-entity! w path))) 
+    (on-directory-delete
+      (fn [w _ path]
+        (unwatch-entity! w path)))))
+
+(defn- create-normal-directory-watcher
+  "Create single-level directory watcher."
+  [interval opts]
+  (SimpleDirectoryWatcher.
+    (simple-watcher 
+      watch-directory 
+      (fn [m path]
+        (when-let [d (apply f/directory path opts)]
+          (assoc m (:path d) d)))
+      (or interval 1000))))
+
 (defn simple-directory-watcher
   "Create single-threaded directory watcher."
-  [directories & {:keys [interval] :as opts}]
-  (let [directories (if (string? directories) [directories] directories)]
-    (SimpleDirectoryWatcher.
-      (-> (simple-watcher 
-            watch-directory 
-            (fn [m path]
-              (when-let [d (apply f/directory path opts)]
-                (assoc m (:path d) d)))
-            (or interval 1000))
-        (watch-entities! directories)))))
-
-;; ## Recursive Directory Watcher
-
-(defn recursive-directory-watcher
-  "Create recursive directory watcher."
   [directories & opts]
-  (let [directories (if (string? directories) [directories] directories)
-        {:keys [interval]} (apply hash-map opts)]
-    (->
-      (SimpleDirectoryWatcher.
-        (simple-watcher 
-          watch-directory 
-          (fn [m path]
-            (when-let [ds (apply f/directories path opts)]
-              (reduce #(assoc %1 (:path %2) %2) m ds)))
-          (or interval 1000)))
-      (watch-entities! directories)
-      (on-directory-create 
-        (fn [w _ path]
-          (watch-entity! w path))) 
-      (on-directory-delete
-        (fn [w _ path]
-          (unwatch-entity! w path))))))
+  (let [{:keys [interval recursive]} (apply hash-map opts)
+        directories (if (string? directories) [directories] directories) 
+        w (if recursive
+            (create-recursive-directory-watcher interval opts)
+            (create-normal-directory-watcher interval opts))]
+    (watch-entities! w directories)))
