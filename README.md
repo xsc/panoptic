@@ -22,9 +22,9 @@ __REPL__
 
 (def watcher
   (-> (simple-file-watcher ["error.txt" "test.txt"])
-    (on-file-modify #(println (:path %) "changed"))
-    (on-file-create #(println (:path %) "created"))
-    (on-file-delete #(println (:path %) "deleted"))
+    (on-file-modify #(println (:path %3) "changed"))
+    (on-file-create #(println (:path %3) "created"))
+    (on-file-delete #(println (:path %3) "deleted"))
     (start-watcher!)))
 
 ...
