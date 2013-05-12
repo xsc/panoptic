@@ -55,6 +55,8 @@
   (unwatch-entities! [this es] 
     (unwatch-entities! internal-watcher es)
     this)
+  (watched-entities [this]
+    (watched-entities internal-watcher))
 
   DirectoryWatcher
   (on-directory-create [this f]

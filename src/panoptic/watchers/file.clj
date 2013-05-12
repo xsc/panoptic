@@ -77,6 +77,8 @@
   (unwatch-entities! [this es] 
     (unwatch-entities! internal-watcher es)
     this)
+  (watched-entities [this]
+    (watched-entities internal-watcher))
 
   FileWatcher
   (on-file-create [this f]
