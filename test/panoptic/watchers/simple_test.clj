@@ -1,13 +1,15 @@
-(ns ^{:doc "Tests for Generic Watchers."
+(ns ^{:doc "Tests for simple, generic Watchers."
       :author "Yannick Scherer"}
-  panoptic.watchers.core-test
+  panoptic.watchers.simple-test
   (:use midje.sweet
         panoptic.watchers.core
+        panoptic.watchers.simple
         panoptic.utils))
 
 (fact "about generic watchers"
   (let [a (atom 0)
-        w (simple-watcher (fn [_] @a) #(assoc %1 %2 0) 10)]
+        f (watch-fn (fn [_] @a) #(assoc %1 %2 0) dissoc)
+        w (simple-watcher f 10)]
     (watch-entities! w [:a :b]) => w
     (watched-entities w) => { :a 0 :b 0 }
     (start-watcher! w) => w
