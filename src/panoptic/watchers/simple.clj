@@ -30,16 +30,14 @@
                            (swap! entities #(run-entity-watcher! w watch-fn %))
                            (u/sleep interval)
                            (recur))))]
-    (fn []
-      (reset! stop? true)
-      watch-future)))
+    (vector watch-future #(reset! stop? true)))) 
 
 ;; ## Watcher Type
 
-(deftype SimpleWatcher [watch-fn interval entities stop-fn]
+(deftype SimpleWatcher [watch-fn interval entities thread-data]
   PWatchFn
   (wrap-entity-handler [this f]
-    (when @stop-fn
+    (when @thread-data
       (throw (Exception. "Cannot wrap Entity Handler if Watcher is running.")))
     (SimpleWatcher. 
       (wrap-entity-handler watch-fn f)
@@ -47,7 +45,7 @@
       (atom @entities) 
       (atom nil)))
   (wrap-watch-fn [this f]
-    (when @stop-fn
+    (when @thread-data
       (throw (Exception. "Cannot wrap watch function if Watcher is running.")))
     (SimpleWatcher. 
       (wrap-watch-fn watch-fn f)
@@ -75,12 +73,13 @@
   (watched-entities [this]
     @entities)
   (start-watcher! [this]
-    (swap! stop-fn #(or % (run-watcher! this watch-fn interval entities)))
-    this)
+    (when-let [[ft _] (swap! thread-data #(or % (run-watcher! this watch-fn interval entities)))]
+      ft))
   (stop-watcher! [this]
-    (when-let [f @stop-fn]
-      (reset! stop-fn nil)
-      (f)))
+    (when-let [[ft f] @thread-data]
+      (reset! thread-data nil)
+      (f)
+      ft))
   
   Object
   (toString [this]

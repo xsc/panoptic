@@ -11,4 +11,6 @@
                  [clj-time "0.5.0"]]
   :profiles {:dev {:dependencies [[midje "1.5.1"]
                                   [log4j "1.2.17"]]  
-                   :plugins [[lein-midje "3.0.1"]]}})
+                   :plugins [[lein-midje "3.0.1"]]}
+             :examples {:source-paths ["examples"]}}
+  :aliases {"run-example" ["with-profile" "dev,examples" "run" "-m"]})

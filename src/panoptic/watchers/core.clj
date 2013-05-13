@@ -90,7 +90,8 @@
   (watched-entities [this]
     "Get current entity map.")
   (start-watcher! [this]
-    "Start Watcher Loop.")
+    "Start Watcher Loop. Should return a future containing the watcher
+     thread.")
   (stop-watcher! [this]
     "Stop Watcher Loop. Returns a future that can be used to wait for
      shutdown completion."))
