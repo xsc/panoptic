@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.core
   (:use [potemkin :only [import-vars]])
-  (:require [panoptic.watchers core file directory]
+  (:require [panoptic.watchers core simple file directory]
             [panoptic.data file directory]
             panoptic.checkers))
 
@@ -29,7 +29,8 @@
 (import-vars
   [panoptic.watchers.core
    
-   wrap-entity-handler!
+   wrap-entity-handler
+   wrap-watch-fn
    watch-entities!
    watch-entity!
    unwatch-entity!
@@ -39,6 +40,7 @@
 
   [panoptic.watchers.file
    
+   file-watch-fn
    simple-file-watcher
 
    on-file-create
@@ -47,6 +49,8 @@
   
   [panoptic.watchers.directory
    
+   directory-watch-fn
+   recursive-directory-watch-fn
    simple-directory-watcher
 
    on-directory-file-create
