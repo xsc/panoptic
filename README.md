@@ -52,6 +52,14 @@ __Watching Directories__
 @(stop-watcher! watcher)
 ```
 
+## Running Examples
+
+To run an example (see "examples" directory) issue the following command:
+
+```
+lein run-example <Example> <Parameters>
+```
+
 ## License
 
 Copyright &copy; 2013 Yannick Scherer
