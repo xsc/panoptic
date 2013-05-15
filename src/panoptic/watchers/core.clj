@@ -124,3 +124,16 @@
   "Remove single Entity from Watch List."
   [w e]
   (unwatch-entities! w [e]))
+
+;; ## Generic Handlers (for entity maps)
+
+(defn on-flag
+  [flag watch-fn f]
+  (after-entity-handler
+    watch-fn
+    #(when (get %3 flag)
+       (f %1 %2 %3))))
+
+(def on-create (partial on-flag :created))
+(def on-delete (partial on-flag :deleted))
+(def on-modify (partial on-flag :modified))

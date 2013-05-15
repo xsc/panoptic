@@ -7,9 +7,11 @@
     (do
       (println "Watching" path "...")
       (let [w (-> (directory-watcher)
-                (on-directory-file-create #(println "   File" (:path %3) "created."))
-                (on-directory-file-delete #(println "   File" (:path %3) "deleted."))
-                (on-directory-create #(println "   Directory" (:path %3) "created."))
-                (on-directory-delete #(println "   Directory" (:path %3) "deleted.")))]
+                (on-file-create #(println "   File" (:path %3) "created."))
+                (on-file-delete #(println "   File" (:path %3) "deleted."))
+                (on-subdirectory-create #(println "   Directory" (:path %3) "created."))
+                (on-subdirectory-delete #(println "   Directory" (:path %3) "deleted."))
+                (on-create #(println "   Directory" (:path %3) "created."))
+                (on-delete #(println "   Directory" (:path %3) "deleted.")))]
         @(start-simple-watcher! w [path] :interval 200))) 
     (println "Usage: lein run-example single-directory <path to directory>")))

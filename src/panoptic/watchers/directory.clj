@@ -18,49 +18,28 @@
        (doseq [e s]
          (f %1 %3 (create-fn (str (:path %3) "/" e)))))))
 
-(defn- on-directory-flag
-  [flag watch-fn f]
-  (after-entity-handler
-    watch-fn
-    #(when (get %3 flag)
-       (f %1 %2 %3))))
-
-(def on-directory-create 
-  "Run function when a watched directory is created. Parameters:
-   - the watcher
-   - the path to the created directory
-   - the directory map"
-  (partial on-directory-flag :created))
-
-(def on-directory-delete 
-  "Run function when a watched directory is deleted. Parameters:
-   - the watcher
-   - the path to the created directory
-   - the directory map"
-  (partial on-directory-flag :deleted))
-
 (def on-subdirectory-create 
   "Run function when a watched directory has a new subdirectory created. Parameters:
    - the watcher
    - the parent directory map
    - the absolute path of the new directory"
-  (partial on-directory-change :created-dirs identity))
+  (partial on-directory-change :created-dirs f/directory))
 
 (def on-subdirectory-delete 
   "Run function when a watched directory has a subdirectory deleted. Parameters:
    - the watcher
    - the parent directory map
    - the absolute path of the new directory"
-  (partial on-directory-change :deleted-dirs identity))
+  (partial on-directory-change :deleted-dirs f/directory))
 
-(def on-directory-file-create 
+(def on-file-create 
   "Run function when a watched directory has a file created. Parameters:
    - the watcher
    - the parent directory map
    - the file map"
   (partial on-directory-change :created-files fs/file))
 
-(def on-directory-file-delete 
+(def on-file-delete 
   "Run function when a watched directory has a file deleted. Parameters:
    - the watcher
    - the parent directory map
@@ -94,8 +73,8 @@
       (fn [m path]
         (when-let [ds (apply f/directories path opts)]
           (reduce #(dissoc %1 (:path %2)) m ds))))
-    (on-subdirectory-create #(watch-entity! %1 [%3])) 
-    (on-subdirectory-delete #(unwatch-entity! %1 %3))))
+    (on-subdirectory-create #(watch-entity! %1 [(:path %3)])) 
+    (on-subdirectory-delete #(unwatch-entity! %1 (:path %3)))))
 
 (defn- normal-directory-watcher
   [opts]

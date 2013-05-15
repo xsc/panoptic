@@ -38,7 +38,12 @@
    unwatch-entity!
    unwatch-entities!
    start-watcher!
-   stop-watcher!]
+   stop-watcher!
+   
+   on-flag
+   on-create
+   on-delete
+   on-modify]
 
   [panoptic.watchers.simple-watchers
    
@@ -47,20 +52,16 @@
 
   [panoptic.watchers.file
    
-   file-watcher
-
-   on-file-create
-   on-file-delete
-   on-file-modify]
+   file-watcher]
   
   [panoptic.watchers.directory
    
    directory-watcher
 
-   on-directory-file-create
-   on-directory-file-delete
-   on-directory-create
-   on-directory-delete]
+   on-subdirectory-create
+   on-subdirectory-delete
+   on-file-create
+   on-file-delete]
   
   [panoptic.checkers
    

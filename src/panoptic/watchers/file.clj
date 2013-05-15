@@ -7,24 +7,6 @@
             [panoptic.data.file :as f]
             [panoptic.utils :as u]))
 
-;; ## Handlers for Files
-
-(defn- wrap-file-handler
-  "Add entity handler to watcher that fires if a given flag is set
-   in the file map."
-  [flag watch-fn f]
-  (wrap-entity-handler
-    watch-fn
-    (fn [h]
-      (fn [& [_ _ file :as args]]
-        (when h (apply h args)) 
-        (when (get file flag)
-          (apply f args))))))
-
-(def on-file-create (partial wrap-file-handler :created))
-(def on-file-delete (partial wrap-file-handler :deleted))
-(def on-file-modify (partial wrap-file-handler :modified))
-
 ;; ## Observation Logic
 
 (defn- update-file!
