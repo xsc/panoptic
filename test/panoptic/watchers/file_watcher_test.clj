@@ -22,7 +22,7 @@
 (defmacro w-sleep
   "Run forms, sleep 20ms, then dereference the atom given as first parameter."
   [a & forms]
-  `(do ~@forms (sleep 20) (deref ~a)))
+  `(do ~@forms (sleep 50) (deref ~a)))
 
 ;; ## Tests
 
@@ -74,11 +74,11 @@
         (w-sleep changes (fs/touch p1)) => (just [[:create p1]])
         (w-sleep changes (fs/touch p2)) => (just [[:create p1] [:create p2]])
         (reset! changes [])
-        (sleep 1050) ;; because last-modified only gives seconds
+        (sleep 1500) ;; because last-modified only gives seconds
         (w-sleep changes (fs/touch p1)) => (just [[:modify p1]])
         (w-sleep changes (fs/touch p2)) => (just [[:modify p1] [:modify p2]])
         (reset! changes [])
-        (sleep 1050)
+        (sleep 1500)
         (w-sleep changes (fs/touch p1)) => (just [[:modify p1]])
         (w-sleep changes (fs/touch p2)) => (just [[:modify p1] [:modify p2]])
         @(stop-watcher! fw) => anything))) 
