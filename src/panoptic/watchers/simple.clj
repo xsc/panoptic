@@ -11,14 +11,16 @@
   "Run the given watcher function over the given entity map, using the given handler
    function."
   [w watch-fn entities]
-  (->> entities
-    (keep 
-      (fn [[k x]]
-        (when x
-          (when-let [f (update-entity! watch-fn w k x)]
-            (run-entity-handler! watch-fn w k x)
-            [k f]))))
-    (into {})))
+  (try 
+    (->> entities
+      (keep 
+        (fn [[k x]]
+          (when x
+            (when-let [f (update-entity! watch-fn w k x)]
+              [k f]))))
+      (into {}))
+    (catch Exception ex
+      (error ex "in `run-entity-watcher!'"))))
 
 (defn- run-watcher!
   "Run Watcher Loop"
@@ -27,9 +29,11 @@
         watch-future (future
                        (loop []
                          (when-not @stop?
-                           (swap! entities #(run-entity-watcher! w watch-fn %))
-                           (u/sleep interval)
-                           (recur))))]
+                           (when-let [es (swap! entities #(run-entity-watcher! w watch-fn %))] 
+                             (doseq [[k x] es]
+                               (run-entity-handler! watch-fn w k x)) 
+                             (u/sleep interval) 
+                             (recur)))))]
     (vector watch-future #(reset! stop? true)))) 
 
 ;; ## Watcher Type

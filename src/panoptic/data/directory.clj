@@ -67,7 +67,7 @@
   "Set `:deleted` data in directory map."
   [dir]
   (-> dir
-    (dissoc :created :modified)
+    (dissoc :created :created-dirs :deleted-dirs :created-files :deleted-files)
     (assoc :deleted true)
     (u/update-timestamp :checked)))
 
