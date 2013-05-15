@@ -63,7 +63,7 @@
 
 ;; ## Simple File Watcher
 
-(defn simple-file-watcher
+(defn simple-file-watcher*
   "Create simple, single-threaded file watcher."
   [files & {:keys [checker interval]}]
   (let [files (if (string? files) [files] files)]
@@ -71,3 +71,11 @@
           (file-watch-fn checker)
           interval)
       (watch-entities! files))))
+
+(defn simple-file-watcher
+  "Create simple, single-threaded file watcher. Multiple files may be given as a Seq,
+   a single file as a string. For options, see `simple-file-watcher*`"
+  [& args]
+  (if (keyword? (first args))
+    (apply simple-file-watcher* nil args)
+    (apply simple-file-watcher* args)))

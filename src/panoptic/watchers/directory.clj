@@ -72,7 +72,7 @@
 
 ;; ## Simple Directory Watcher
 
-(defn simple-directory-watcher
+(defn simple-directory-watcher*
   "Create single-threaded directory watcher."
   [directories & opts]
   (let [{:keys [interval recursive]} (apply hash-map opts)
@@ -82,3 +82,11 @@
             (directory-watch-fn opts))]
     (-> (sm/simple-watcher w interval)
       (watch-entities! directories))))
+
+(defn simple-directory-watcher
+  "Create simple, single-threaded directory watcher. Multiple directories may be given as a Seq,
+   a single directory as a string. For options, see `simple-directory-watcher*`"
+  [& args]
+  (if (keyword? (first args))
+    (apply simple-directory-watcher* nil args)
+    (apply simple-directory-watcher* args)))
