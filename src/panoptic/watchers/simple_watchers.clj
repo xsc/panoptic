@@ -1,6 +1,6 @@
 (ns ^{:doc "Simple, single-threaded Watchers."
       :author "Yannick Scherer"}
-  panoptic.watchers.simple
+  panoptic.watchers.simple-watchers
   (:use [clojure.tools.logging :only [debug info warn error]]
         panoptic.watchers.core)
   (:require [panoptic.utils :as u])) 
@@ -41,20 +41,10 @@
 (deftype SimpleWatcher [watch-fn interval entities thread-data]
   Watcher
   (watch-entities! [this es]
-    (swap! entities #(reduce 
-                       (fn [m e] 
-                         (if-let [f (:add-fn watch-fn assoc)]
-                           (or (f m e) m)
-                           m))
-                       % es))
+    (swap! entities #(add-entities watch-fn % es))
     this)
   (unwatch-entities! [this es]
-    (swap! entities #(reduce 
-                       (fn [m e] 
-                         (if-let [f (:remove-fn watch-fn assoc)]
-                           (or (f m e) m)
-                           m))
-                       % es))
+    (swap! entities #(remove-entities watch-fn % es))
     this)
   (watched-entities [this]
     @entities)

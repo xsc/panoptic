@@ -5,7 +5,6 @@
         [clojure.tools.logging :only [error]])
   (:require [panoptic.checkers :as c]
             [panoptic.data.file :as f]
-            [panoptic.watchers.simple :as s :only [simple-watcher]]
             [panoptic.utils :as u]))
 
 ;; ## Handlers for Files

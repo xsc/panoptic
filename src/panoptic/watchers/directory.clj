@@ -6,7 +6,6 @@
             [panoptic.checkers :as c]
             [panoptic.data.file :as fs]
             [panoptic.data.directory :as f]
-            [panoptic.watchers.simple :as sm :only [simple-watcher]]
             [panoptic.utils :as u]))
 
 ;; ## Handlers for Directories

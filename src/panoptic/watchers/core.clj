@@ -21,8 +21,8 @@
 ;;   file path) and returns a new map with the additional entities.
 ;; - `:remove-fn`: a function that takes a map and an entity description and returns
 ;;   a new map without the desired entities.
-;; - `:handle-fn`: a function that takes an entity and performs any tasks changes to
-;;   the entity require
+;; - `:handle-fn`: a function that takes a watcher, an entity key and the entity and 
+;;   performs any tasks changes to the entity require
 ;;
 
 (defrecord WatchFn [update-fn add-fn remove-fn handle-fn]
@@ -43,6 +43,7 @@
    (WatchFn. update-fn (or add-fn #(assoc %1 %2 %2)) (or remove-fn dissoc) (constantly nil))))
 
 (defn before-entity-handler
+  "Run function before the given WatchFn's entity handler."
   [watch-fn f]
   (wrap-entity-handler
     watch-fn
@@ -52,6 +53,7 @@
         (when h (apply h args))))))
 
 (defn after-entity-handler
+  "Run function after the given WatchFn's entity handler."
   [watch-fn f]
   (wrap-entity-handler
     watch-fn

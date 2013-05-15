@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.core
   (:use [potemkin :only [import-vars]])
-  (:require [panoptic.watchers core simple file directory]
+  (:require [panoptic.watchers core simple-watchers multi-threaded-watchers file directory]
             [panoptic.data file directory]
             panoptic.checkers))
 
@@ -40,7 +40,7 @@
    start-watcher!
    stop-watcher!]
 
-  [panoptic.watchers.simple
+  [panoptic.watchers.simple-watchers
    
    simple-watcher
    start-simple-watcher!]
