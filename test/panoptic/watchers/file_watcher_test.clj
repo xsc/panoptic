@@ -19,10 +19,19 @@
 
 ;; ## Helper Macro
 
-(defmacro w-sleep
-  "Run forms, sleep 500ms, then dereference the atom given as first parameter."
-  [a & forms]
-  `(do ~@forms (sleep 500) (deref ~a)))
+(defmacro wh
+  "Run forms, wait until condition is true, then dereference the atom at the var `changes`."
+  [until? & forms]
+  `(do 
+     ~@forms 
+     (loop [] (when-not ~until? (recur)))
+     (sleep 400)
+     (deref ~'changes)))
+
+(defn slp 
+  [n]
+  (sleep n)
+  true)
 
 ;; ## Tests
 
@@ -30,30 +39,30 @@
   (tabular
     (with-state-changes [(before :facts (do (fs/delete f1) (fs/delete f2)))
                          (after :facts (do (fs/delete f1) (fs/delete f2)))]
-      (fact "about checksum file watchers"
+      (fact :slow "about checksum file watchers" 
         (let [changes (atom [])
               fw (-> (file-watcher :checker ?checksum)
                    (on-create #(swap! changes conj [:create (:path %3)]))
                    (on-modify #(swap! changes conj [:modify (:path %3)]))
                    (on-delete #(swap! changes conj [:delete (:path %3)]))
-                   (?start [p1 p2] :interval 50))]
+                   (?start [p1 p2] :interval 30))]
           fw => #(satisfies? Watcher %)
           @changes => []
-          (w-sleep changes (fs/touch f1)) => (just [[:create p1]])
-          (w-sleep changes (fs/touch f2)) => (just [[:create p1] [:create p2]])
+          (wh (fs/exists? f1) (fs/touch f1)) => (just [[:create p1]])
+          (wh (fs/exists? f2) (fs/touch f2)) => (just [[:create p1] [:create p2]])
           (reset! changes [])
-          (w-sleep changes (fs/touch f1)) => (just [])
-          (w-sleep changes (fs/touch f2)) => (just [])
-          (w-sleep changes (spit p1 "text")) => (just [[:modify p1]])
-          (w-sleep changes (spit p2 "text")) => (just [[:modify p1] [:modify p2]])
+          (wh (slp 50) (fs/touch f1)) => (just [])
+          (wh (slp 50) (fs/touch f2)) => (just [])
+          (wh (= (slurp p1) "text") (spit p1 "text")) => (just [[:modify p1]])
+          (wh (= (slurp p2) "text") (spit p2 "text")) => (just [[:modify p1] [:modify p2]])
           (reset! changes [])
-          (w-sleep changes (spit p1 "text")) => (just [])
-          (w-sleep changes (spit p2 "text")) => (just [])
-          (w-sleep changes (spit p1 "text2")) => (just [[:modify p1]])
-          (w-sleep changes (spit p2 "text2")) => (just [[:modify p1] [:modify p2]])
+          (wh (slp 50) (spit p1 "text")) => (just [])
+          (wh (slp 50) (spit p2 "text")) => (just [])
+          (wh (= (slurp p1) "text2") (spit p1 "text2")) => (just [[:modify p1]])
+          (wh (= (slurp p2) "text2") (spit p2 "text2")) => (just [[:modify p1] [:modify p2]])
           (reset! changes [])
-          (w-sleep changes (fs/delete f1)) => (just [[:delete p1]])
-          (w-sleep changes (fs/delete f2)) => (just [[:delete p1] [:delete p2]])
+          (wh (not (fs/exists? f1)) (fs/delete f1)) => (just [[:delete p1]])
+          (wh (not (fs/exists? f2)) (fs/delete f2)) => (just [[:delete p1] [:delete p2]])
           @(stop-watcher! fw) => anything))) 
     ?checksum md5 sha1 sha256)
   ?start 
@@ -62,25 +71,25 @@
 (tabular
   (with-state-changes [(before :facts (do (fs/delete f1) (fs/delete f2)))
                        (after :facts (do (fs/delete f1) (fs/delete f2)))]
-    (fact "about timestamp file watchers"
+    (fact :slow "about timestamp file watchers"
       (let [changes (atom [])
             fw (-> (file-watcher :checker last-modified)
                  (on-create #(swap! changes conj [:create (:path %3)]))
                  (on-modify #(swap! changes conj [:modify (:path %3)]))
                  (on-delete #(swap! changes conj [:delete (:path %3)]))
-                 (?start [p1 p2] :interval 50))]
+                 (?start [p1 p2] :interval 30))]
         fw => #(satisfies? Watcher %)
         @changes => []
-        (w-sleep changes (fs/touch p1)) => (just [[:create p1]])
-        (w-sleep changes (fs/touch p2)) => (just [[:create p1] [:create p2]])
+        (wh (fs/exists? p1) (fs/touch p1)) => (just [[:create p1]])
+        (wh (fs/exists? p2) (fs/touch p2)) => (just [[:create p1] [:create p2]])
         (reset! changes [])
         (sleep 1500) ;; because last-modified only gives seconds
-        (w-sleep changes (fs/touch p1)) => (just [[:modify p1]])
-        (w-sleep changes (fs/touch p2)) => (just [[:modify p1] [:modify p2]])
+        (wh (slp 50) (fs/touch p1)) => (just [[:modify p1]])
+        (wh (slp 50) (fs/touch p2)) => (just [[:modify p1] [:modify p2]])
         (reset! changes [])
         (sleep 1500)
-        (w-sleep changes (fs/touch p1)) => (just [[:modify p1]])
-        (w-sleep changes (fs/touch p2)) => (just [[:modify p1] [:modify p2]])
+        (wh (slp 50) (fs/touch p1)) => (just [[:modify p1]])
+        (wh (slp 50) (fs/touch p2)) => (just [[:modify p1] [:modify p2]])
         @(stop-watcher! fw) => anything))) 
   ?start 
   start-simple-watcher!)
