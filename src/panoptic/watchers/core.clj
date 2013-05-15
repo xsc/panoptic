@@ -6,41 +6,19 @@
 
 ;; ## Protocol for WatchFn
 
-(defprotocol PWatchFn
+(defprotocol WatchFunction
+  (update-function [this]
+    "Get WatchFn's update function.")
+  (entity-handler [this]
+    "Get WatchFn's entity handler")
+  (add-entities [this m es] 
+    "Add entities to a map using the given WatchFn's add function.")
+  (remove-entities [this m es]
+    "Add entities to a map using the given WatchFn's add function.") 
   (wrap-entity-handler [this f]
     "Wrap a WatchFn's entity handler function using the given one.")
   (wrap-watch-fn [this f]
     "Wrap a WatchFn's update function using the given one."))
-
-;; ## Watch Logic
-;;
-;; The watcher logic consists of a map of:
-;; - `:update-fn`: a function that takes an entity, performs checks, updates, ...
-;;   and returns the updated entity
-;; - `:add-fn`: a function that takes a map and an entity description (e.g. a
-;;   file path) and returns a new map with the additional entities.
-;; - `:remove-fn`: a function that takes a map and an entity description and returns
-;;   a new map without the desired entities.
-;; - `:handle-fn`: a function that takes a watcher, an entity key and the entity and 
-;;   performs any tasks changes to the entity require
-;;
-
-(defrecord WatchFn [update-fn add-fn remove-fn handle-fn]
-  PWatchFn
-  (wrap-entity-handler [{:keys [handle-fn] :as w} f]
-    (when-not (fn? f)
-      (throw (Exception. "expects a function as second parameter.")))
-    (assoc w :handle-fn (f handle-fn)))
-  (wrap-watch-fn [{:keys [update-fn] :as w} f]
-    (when-not (fn? f)
-      (throw (Exception. "expects a function as second parameter.")))
-    (assoc w :update-fn (f update-fn))))
-
-(defn watch-fn
-  "Create new WatchFn."
-  ([update-fn] (watch-fn update-fn nil nil))
-  ([update-fn add-fn remove-fn] 
-   (WatchFn. update-fn (or add-fn #(assoc %1 %2 %2)) (or remove-fn dissoc) (constantly nil))))
 
 (defn before-entity-handler
   "Run function before the given WatchFn's entity handler."
@@ -64,40 +42,68 @@
 
 (defn run-entity-handler!
   "Run a WatchFn's entity handler on a given entity."
-  [^WatchFn {:keys [handle-fn]} watcher entity-key entity]
-  (when (and entity-key entity handle-fn) 
-    (try
-      (handle-fn watcher entity-key entity)
-      (catch Exception ex
-        (error ex "in entity handler for:" entity-key)))
-    nil))
+  [watch-fn watcher entity-key entity]
+  (let [handle-fn (entity-handler watch-fn)]
+    (when (and entity-key entity handle-fn) 
+      (try
+        (handle-fn watcher entity-key entity)
+        (catch Exception ex
+          (error ex "in entity handler for:" entity-key)))
+      nil)))
 
 (defn update-entity!
   "Run a WatchFn's entity update function on a given entity."
-  [^WatchFn {:keys [update-fn]} watcher entity-key entity]
-  (when (and update-fn entity)
-    (try 
-      (update-fn entity)
-      (catch Exception ex
-        (error ex "in update function for: " entity-key)))))
+  [watch-fn watcher entity-key entity]
+  (let [update-fn (update-function watch-fn)]
+    (when (and update-fn entity)
+      (try 
+        (update-fn entity)
+        (catch Exception ex
+          (error ex "in update function for: " entity-key))))))
 
-(defn add-entities
-  "Add entities to a map using the given WatchFn's add function."
-  [^WatchFn {:keys [add-fn]} m es]
-  (let [f (or add-fn #(assoc %1 %2 %2))]
-    (reduce
-      (fn [m e]
-        (or (f m e) m)) 
-      m es)))
+;; ## Watch Logic
+;;
+;; The watcher logic consists of a map of:
+;; - `:update-fn`: a function that takes an entity, performs checks, updates, ...
+;;   and returns the updated entity
+;; - `:add-fn`: a function that takes a map and an entity description (e.g. a
+;;   file path) and returns a new map with the additional entities.
+;; - `:remove-fn`: a function that takes a map and an entity description and returns
+;;   a new map without the desired entities.
+;; - `:handle-fn`: a function that takes a watcher, an entity key and the entity and 
+;;   performs any tasks changes to the entity require
+;;
 
-(defn remove-entities
-  "Remove entities from a map using the given WatchFn's remove function."
-  [^WatchFn {:keys [remove-fn]} m es]
-  (let [f (or remove-fn dissoc)]
-    (reduce
-      (fn [m e]
-        (or (f m e) m)) 
-      m es)))
+(defrecord WatchFn [update-fn add-fn remove-fn handle-fn]
+  WatchFunction
+  (update-function [this] update-fn)
+  (entity-handler [this] handle-fn)
+  (add-entities [this m es]
+    (let [f (or add-fn #(assoc %1 %2 %2))]
+      (reduce
+        (fn [m e]
+          (or (f m e) m)) 
+        m es)))
+  (remove-entities [this m es]
+    (let [f (or remove-fn dissoc)]
+      (reduce
+        (fn [m e]
+          (or (f m e) m)) 
+        m es)))
+  (wrap-entity-handler [this f]
+    (when-not (fn? f)
+      (throw (Exception. "expects a function as second parameter.")))
+    (assoc this :handle-fn (f handle-fn)))
+  (wrap-watch-fn [this f]
+    (when-not (fn? f)
+      (throw (Exception. "expects a function as second parameter.")))
+    (assoc this :update-fn (f update-fn))))
+
+(defn watch-fn
+  "Create new WatchFn."
+  ([update-fn] (watch-fn update-fn nil nil))
+  ([update-fn add-fn remove-fn] 
+   (WatchFn. update-fn (or add-fn #(assoc %1 %2 %2)) (or remove-fn dissoc) (constantly nil))))
 
 ;; ## Watcher Protocol
 
@@ -127,13 +133,22 @@
 
 ;; ## Generic Handlers (for entity maps)
 
-(defn on-flag
-  [flag watch-fn f]
-  (after-entity-handler
-    watch-fn
-    #(when (get %3 flag)
-       (f %1 %2 %3))))
+(defprotocol StandardEntityHandlers
+  (on-flag [this flag f])
+  (on-create [this f])
+  (on-modify [this f])
+  (on-delete [this f]))
 
-(def on-create (partial on-flag :created))
-(def on-delete (partial on-flag :deleted))
-(def on-modify (partial on-flag :modified))
+(extend-type WatchFn
+  StandardEntityHandlers
+  (on-flag [this flag f]
+    (after-entity-handler
+      this
+      #(when (get %3 flag)
+         (f %1 %2 %3))))
+  (on-create [this f]
+    (on-flag this :created f))
+  (on-modify [this f]
+    (on-flag this :modified f))
+  (on-delete [this f]
+    (on-flag this :deleted f)))

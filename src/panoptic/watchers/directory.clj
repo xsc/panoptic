@@ -10,6 +10,12 @@
 
 ;; ## Handlers for Directories
 
+(defprotocol DirectoryWatchFn
+  (on-subdirectory-create [this f])
+  (on-subdirectory-delete [this f])
+  (on-file-create [this f])
+  (on-file-delete [this f]))
+
 (defn- on-directory-change
   [set-key create-fn watch-fn f]
   (after-entity-handler 
@@ -18,33 +24,16 @@
        (doseq [e s]
          (f %1 %3 (create-fn (str (:path %3) "/" e)))))))
 
-(def on-subdirectory-create 
-  "Run function when a watched directory has a new subdirectory created. Parameters:
-   - the watcher
-   - the parent directory map
-   - the absolute path of the new directory"
-  (partial on-directory-change :created-dirs f/directory))
-
-(def on-subdirectory-delete 
-  "Run function when a watched directory has a subdirectory deleted. Parameters:
-   - the watcher
-   - the parent directory map
-   - the absolute path of the new directory"
-  (partial on-directory-change :deleted-dirs f/directory))
-
-(def on-file-create 
-  "Run function when a watched directory has a file created. Parameters:
-   - the watcher
-   - the parent directory map
-   - the file map"
-  (partial on-directory-change :created-files fs/file))
-
-(def on-file-delete 
-  "Run function when a watched directory has a file deleted. Parameters:
-   - the watcher
-   - the parent directory map
-   - the file map"
-  (partial on-directory-change :deleted-files fs/file))
+(extend-type panoptic.watchers.core.WatchFn
+  DirectoryWatchFn
+  (on-subdirectory-create [this f] 
+    (on-directory-change :created-dirs f/directory this f))
+  (on-subdirectory-delete [this f] 
+    (on-directory-change :deleted-dirs f/directory this f))
+  (on-file-create [this f] 
+    (on-directory-change :created-files fs/file this f))
+  (on-file-delete [this f] 
+    (on-directory-change :deleted-files fs/file this f)))
 
 ;; ## Watching Directories
 

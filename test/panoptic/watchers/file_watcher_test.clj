@@ -20,9 +20,9 @@
 ;; ## Helper Macro
 
 (defmacro w-sleep
-  "Run forms, sleep 20ms, then dereference the atom given as first parameter."
+  "Run forms, sleep 200ms, then dereference the atom given as first parameter."
   [a & forms]
-  `(do ~@forms (sleep 50) (deref ~a)))
+  `(do ~@forms (sleep 200) (deref ~a)))
 
 ;; ## Tests
 
@@ -36,7 +36,7 @@
                    (on-create #(swap! changes conj [:create (:path %3)]))
                    (on-modify #(swap! changes conj [:modify (:path %3)]))
                    (on-delete #(swap! changes conj [:delete (:path %3)]))
-                   (?start [p1 p2] :interval 10))]
+                   (?start [p1 p2] :interval 50))]
           fw => #(satisfies? Watcher %)
           @changes => []
           (w-sleep changes (fs/touch f1)) => (just [[:create p1]])
@@ -68,7 +68,7 @@
                  (on-create #(swap! changes conj [:create (:path %3)]))
                  (on-modify #(swap! changes conj [:modify (:path %3)]))
                  (on-delete #(swap! changes conj [:delete (:path %3)]))
-                 (?start [p1 p2] :interval 10))]
+                 (?start [p1 p2] :interval 50))]
         fw => #(satisfies? Watcher %)
         @changes => []
         (w-sleep changes (fs/touch p1)) => (just [[:create p1]])
