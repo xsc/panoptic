@@ -94,7 +94,6 @@
       (fn [m path]
         (when-let [ds (apply f/directories path opts)]
           (reduce #(dissoc %1 (:path %2)) m ds))))
-    (on-directory-delete #(unwatch-entity! %1 (:path %3)))
     (on-subdirectory-create #(watch-entity! %1 [%3])) 
     (on-subdirectory-delete #(unwatch-entity! %1 %3))))
 
