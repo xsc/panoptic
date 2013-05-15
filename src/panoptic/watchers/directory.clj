@@ -11,31 +11,36 @@
 ;; ## Handlers for Directories
 
 (defn- wrap-directory-handler
-  "Add Handler that observes sets at the given map key in a directory map."
-  [k watch-fn f]
+  "Add Handler that observes sets at the given map key in a directory map, as well
+   as if the given flag is set."
+  [k flag watch-fn f]
   (wrap-entity-handler
     watch-fn
     (fn [h]
       (fn [& [w _ {:keys [path] :as d} :as args]]
         (when h (apply h args))
+        (when (and flag (get d flag)) 
+          (f w d path))
         (when-let [s (get d k)]
           (when (seq s)
             (doseq [entity s]
               (f w d (str path "/" entity)))))))))
 
-(def on-directory-create (partial wrap-directory-handler :created-dirs))
-(def on-directory-delete (partial wrap-directory-handler :deleted-dirs))
-(def on-directory-file-create (partial wrap-directory-handler :created-files))
-(def on-directory-file-delete (partial wrap-directory-handler :deleted-files))
+(def on-directory-create (partial wrap-directory-handler :created-dirs :created))
+(def on-directory-delete (partial wrap-directory-handler :deleted-dirs :deleted))
+(def on-directory-file-create (partial wrap-directory-handler :created-files nil))
+(def on-directory-file-delete (partial wrap-directory-handler :deleted-files nil))
 
 ;; ## Watching Directories
 
 (defn- update-directory!
   "Check the given directory for new files/subdirectories, returning `nil` if it was deleted."
   [d0]
-  (if-let [d (f/refresh-directory d0)]
-    (f/set-directory-diff d0 d)
-    (f/set-directory-deleted d0)))
+  (let [d (f/refresh-directory d0)]
+    (cond (and (not (or (:deleted d0) (:missing d0))) (not d)) (f/set-directory-deleted d0)
+          (not d) (f/set-directory-missing d0)
+          (or (:missing d0) (:deleted d0)) (-> d0 (f/set-directory-diff d) (f/set-directory-created)) 
+          :else (-> d0 (f/set-directory-diff d) (f/set-directory-untouched)))))
 
 ;; ## Directory Watcher
 

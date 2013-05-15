@@ -27,10 +27,10 @@
                            (constantly true)
                            (let [ext (set (map #(str "." (if (keyword? %) (name %) (str %))) extensions))]
                              #(contains? ext (fs/extension %))))]
-    (when (and (fs/exists? f) (fs/directory? f))
+    (when-not (fs/file? f) 
       (let [path (fs/absolute-path f)
-            children (fs/list-dir f)]
-        (-> {}
+            children (when (fs/exists? f) (fs/list-dir f))]
+        (-> (if (fs/exists? f) {} {:missing true})
           (assoc :path path)
           (assoc :opts opts)
           (assoc :files 
@@ -49,7 +49,8 @@
 (defn refresh-directory
   "Create current state of given Directory."
   [{:keys [path opts]}]
-  (apply directory path opts))
+  (when (and (fs/directory? path) (fs/exists? path))
+    (apply directory path opts)))
 
 (defn directories
   "Create seq of directories by recursively traversing the directory tree starting at
@@ -63,12 +64,32 @@
 
 ;; ## Directory Checking
 
+(defn set-directory-created
+  [dir]
+  (-> dir
+    (dissoc :deleted :missing)
+    (assoc :created true)
+    (u/update-timestamp :checked)))
+
 (defn set-directory-deleted
   "Set `:deleted` data in directory map."
   [dir]
   (-> dir
-    (dissoc :created :created-dirs :deleted-dirs :created-files :deleted-files)
+    (dissoc :created :missing)
     (assoc :deleted true)
+    (u/update-timestamp :checked)))
+
+(defn set-directory-missing
+  [dir]
+  (-> dir
+    (dissoc :created :deleted)
+    (assoc :missing true)
+    (u/update-timestamp :checked)))
+
+(defn set-directory-untouched
+  [dir]
+  (-> dir
+    (dissoc :created :deleted :missing)
     (u/update-timestamp :checked)))
 
 (defn set-directory-diff

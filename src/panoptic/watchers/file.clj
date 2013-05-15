@@ -37,7 +37,7 @@
       (condp = [checksum chk]
         [nil nil] (f/set-file-missing f)
         [chk chk] (f/set-file-untouched f chk)
-        [nil chk] (if (:missing f) ;; this prevents creation notifications on startup
+        [nil chk] (if (or (:deleted f) (:missing f)) ;; this prevents creation notifications on startup
                     (f/set-file-created f chk) 
                     (f/set-file-untouched f chk)) 
         [checksum nil] (f/set-file-deleted f)
