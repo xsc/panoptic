@@ -20,9 +20,9 @@
 ;; ## Helper Macro
 
 (defmacro w-sleep
-  "Run forms, sleep 200ms, then dereference the atom given as first parameter."
+  "Run forms, sleep 500ms, then dereference the atom given as first parameter."
   [a & forms]
-  `(do ~@forms (sleep 200) (deref ~a)))
+  `(do ~@forms (sleep 500) (deref ~a)))
 
 ;; ## Tests
 
