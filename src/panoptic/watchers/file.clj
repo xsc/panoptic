@@ -34,7 +34,7 @@
   ([] (file-watcher nil))
   ([& {:keys [checker]}] 
    (watch-fn
-     (partial update-file! (or checker c/last-modified))
+     (partial update-file! (or checker c/md5))
      (fn [m path]
        (when-let [f (f/file path)]
          (assoc m (:path f) f)))
