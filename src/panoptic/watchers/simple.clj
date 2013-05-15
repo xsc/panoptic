@@ -59,8 +59,8 @@
   (watched-entities [this]
     @entities)
   (start-watcher! [this]
-    (when (swap! thread-data #(or % (run-watcher! this watch-fn interval entities)))
-      this))
+    (swap! thread-data #(or % (run-watcher! this watch-fn interval entities)))
+    this)
   (stop-watcher! [this]
     (when-let [[ft f] @thread-data]
       (reset! thread-data nil)

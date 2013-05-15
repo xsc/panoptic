@@ -4,6 +4,7 @@
   (:use panoptic.watchers.core)
   (:require [clojure.set :as s :only [difference]]
             [panoptic.checkers :as c]
+            [panoptic.data.file :as fs]
             [panoptic.data.directory :as f]
             [panoptic.watchers.simple :as sm :only [simple-watcher]]
             [panoptic.utils :as u]))
@@ -11,12 +12,12 @@
 ;; ## Handlers for Directories
 
 (defn- on-directory-change
-  [set-key watch-fn f]
+  [set-key create-fn watch-fn f]
   (after-entity-handler 
     watch-fn 
     #(when-let [s (get %3 set-key)] 
        (doseq [e s]
-         (f %1 %3 (str (:path %3) "/" e))))))
+         (f %1 %3 (create-fn (str (:path %3) "/" e)))))))
 
 (defn- on-directory-flag
   [flag watch-fn f]
@@ -44,28 +45,28 @@
    - the watcher
    - the parent directory map
    - the absolute path of the new directory"
-  (partial on-directory-change :created-dirs))
+  (partial on-directory-change :created-dirs identity))
 
 (def on-subdirectory-delete 
   "Run function when a watched directory has a subdirectory deleted. Parameters:
    - the watcher
    - the parent directory map
    - the absolute path of the new directory"
-  (partial on-directory-change :deleted-dirs))
+  (partial on-directory-change :deleted-dirs identity))
 
 (def on-directory-file-create 
   "Run function when a watched directory has a file created. Parameters:
    - the watcher
    - the parent directory map
-   - the absolute path of the new directory"
-  (partial on-directory-change :created-files))
+   - the file map"
+  (partial on-directory-change :created-files fs/file))
 
 (def on-directory-file-delete 
   "Run function when a watched directory has a file deleted. Parameters:
    - the watcher
    - the parent directory map
-   - the absolute path of the new directory"
-  (partial on-directory-change :deleted-files))
+   - the file map"
+  (partial on-directory-change :deleted-files fs/file))
 
 ;; ## Watching Directories
 

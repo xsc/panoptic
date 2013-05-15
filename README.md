@@ -21,11 +21,11 @@ __Watching (possibly non-existing) Files__
 (use 'panoptic.core)
 
 (def watcher
-  (-> (simple-file-watcher ["error.txt" "test.txt"])
+  (-> (file-watcher :checker md5)
     (on-file-modify #(println (:path %3) "changed"))
     (on-file-create #(println (:path %3) "created"))
     (on-file-delete #(println (:path %3) "deleted"))
-    (start-watcher!)))
+    (start-simple-watcher! ["log.txt" "error.txt"] :interval 500)))
 
 ...
 
@@ -38,14 +38,12 @@ __Watching Directories__
 (use 'panoptic.core)
 
 (def watcher
-  (-> (simple-directory-watcher ["/path/to/directory"] 
-        :recursive true 
-        :extensions [:clj])
-    (on-directory-create #(println "Directory" %3 "created"))
-    (on-directory-delete #(println "Directory" %3 "deleted"))
-    (on-directory-file-create #(println "File" %3 "created"))
-    (on-directory-file-delete #(println "File" %3 "deleted"))
-    (start-watcher!)))
+  (-> (directory-watcher :recursive true :extensions [:clj])
+    (on-directory-create #(println "Directory" (:path %3) "created"))
+    (on-directory-delete #(println "Directory" (:path %3) "deleted"))
+    (on-directory-file-create #(println "File" (:path %3) "created"))
+    (on-directory-file-delete #(println "File" (:path %3) "deleted"))
+    (start-simple-watcher! ["/path/to/directory"] :interval 500)))
 
 ...
 

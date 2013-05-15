@@ -12,7 +12,7 @@
         w (simple-watcher f 10)]
     (watch-entities! w [:a :b]) => w
     (watched-entities w) => { :a 0 :b 0 }
-    (start-watcher! w) => future?
+    (start-watcher! w) => w
     (reset! a 1) => 1
     (sleep 20) => anything
     (watched-entities w) => { :a 1 :b 1 }
