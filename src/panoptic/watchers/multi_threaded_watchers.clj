@@ -6,13 +6,6 @@
   (:require [panoptic.utils :as u]
             [panoptic.watchers.simple-watchers :as sw])) 
 
-;; ## Concept
-;;
-;; The multi-threaded Watcher manages two data stores:
-;;
-;; - a cyclic list of entity atoms
-;; - a map of [entity key -> entity-atom]
-
 (deftype MultiWatcher [watch-fn n interval]
   Watcher
   (watch-entities! [this es]
