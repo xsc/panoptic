@@ -75,14 +75,14 @@
   "Set `:deleted` data in directory map."
   [dir]
   (-> dir
-    (dissoc :created :missing)
+    (dissoc :created :missing :created-dirs :deleted-dirs :created-files :deleted-files)
     (assoc :deleted true)
     (u/update-timestamp :checked)))
 
 (defn set-directory-missing
   [dir]
   (-> dir
-    (dissoc :created :deleted)
+    (dissoc :created :deleted :created-dirs :deleted-dirs :created-files :deleted-files)
     (assoc :missing true)
     (u/update-timestamp :checked)))
 

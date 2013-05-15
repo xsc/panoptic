@@ -42,6 +42,24 @@
   ([update-fn add-fn remove-fn] 
    (WatchFn. update-fn (or add-fn #(assoc %1 %2 %2)) (or remove-fn dissoc) (constantly nil))))
 
+(defn before-entity-handler
+  [watch-fn f]
+  (wrap-entity-handler
+    watch-fn
+    (fn [h]
+      (fn [& args]
+        (apply f args)
+        (when h (apply h args))))))
+
+(defn after-entity-handler
+  [watch-fn f]
+  (wrap-entity-handler
+    watch-fn
+    (fn [h]
+      (fn [& args]
+        (when h (apply h args))
+        (apply f args)))))
+
 (defn run-entity-handler!
   "Run a WatchFn's entity handler on a given entity."
   [^WatchFn {:keys [handle-fn]} watcher entity-key entity]
@@ -82,7 +100,7 @@
 ;; ## Watcher Protocol
 
 (defprotocol Watcher
-  "Protocol for Watchers."
+  "Protocol for Watchers. Watchers should also implement clojure.lang.IDeref"
   (watch-entities! [this es]
     "Add Entities to Watch List.")
   (unwatch-entities! [this es]
@@ -90,8 +108,7 @@
   (watched-entities [this]
     "Get current entity map.")
   (start-watcher! [this]
-    "Start Watcher Loop. Should return a future containing the watcher
-     thread.")
+    "Start Watcher Loop.")
   (stop-watcher! [this]
     "Stop Watcher Loop. Returns a future that can be used to wait for
      shutdown completion."))

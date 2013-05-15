@@ -10,61 +10,95 @@
 
 ;; ## Handlers for Directories
 
-(defn- wrap-directory-handler
-  "Add Handler that observes sets at the given map key in a directory map, as well
-   as if the given flag is set."
-  [k flag watch-fn f]
-  (wrap-entity-handler
-    watch-fn
-    (fn [h]
-      (fn [& [w _ {:keys [path] :as d} :as args]]
-        (when h (apply h args))
-        (when (and flag (get d flag)) 
-          (f w d path))
-        (when-let [s (get d k)]
-          (when (seq s)
-            (doseq [entity s]
-              (f w d (str path "/" entity)))))))))
+(defn- on-directory-change
+  [set-key watch-fn f]
+  (after-entity-handler 
+    watch-fn 
+    #(when-let [s (get %3 set-key)] 
+       (doseq [e s]
+         (f %1 %3 (str (:path %3) "/" e))))))
 
-(def on-directory-create (partial wrap-directory-handler :created-dirs :created))
-(def on-directory-delete (partial wrap-directory-handler :deleted-dirs :deleted))
-(def on-directory-file-create (partial wrap-directory-handler :created-files nil))
-(def on-directory-file-delete (partial wrap-directory-handler :deleted-files nil))
+(defn- on-directory-flag
+  [flag watch-fn f]
+  (after-entity-handler
+    watch-fn
+    #(when (get %3 flag)
+       (f %1 %2 %3))))
+
+(def on-directory-create 
+  "Run function when a watched directory is created. Parameters:
+   - the watcher
+   - the path to the created directory
+   - the directory map"
+  (partial on-directory-flag :created))
+
+(def on-directory-delete 
+  "Run function when a watched directory is deleted. Parameters:
+   - the watcher
+   - the path to the created directory
+   - the directory map"
+  (partial on-directory-flag :deleted))
+
+(def on-subdirectory-create 
+  "Run function when a watched directory has a new subdirectory created. Parameters:
+   - the watcher
+   - the parent directory map
+   - the absolute path of the new directory"
+  (partial on-directory-change :created-dirs))
+
+(def on-subdirectory-delete 
+  "Run function when a watched directory has a subdirectory deleted. Parameters:
+   - the watcher
+   - the parent directory map
+   - the absolute path of the new directory"
+  (partial on-directory-change :deleted-dirs))
+
+(def on-directory-file-create 
+  "Run function when a watched directory has a file created. Parameters:
+   - the watcher
+   - the parent directory map
+   - the absolute path of the new directory"
+  (partial on-directory-change :created-files))
+
+(def on-directory-file-delete 
+  "Run function when a watched directory has a file deleted. Parameters:
+   - the watcher
+   - the parent directory map
+   - the absolute path of the new directory"
+  (partial on-directory-change :deleted-files))
 
 ;; ## Watching Directories
 
 (defn- update-directory!
   "Check the given directory for new files/subdirectories, returning `nil` if it was deleted."
-  [d0]
-  (let [d (f/refresh-directory d0)]
-    (cond (and (not (or (:deleted d0) (:missing d0))) (not d)) (f/set-directory-deleted d0)
-          (not d) (f/set-directory-missing d0)
-          (or (:missing d0) (:deleted d0)) (-> d0 (f/set-directory-diff d) (f/set-directory-created)) 
+  [{:keys [missing deleted] :as d0}]
+  (let [missing? (or missing deleted)
+        d (f/refresh-directory d0)]
+    (cond (not (or missing? d))  (f/set-directory-deleted d0)
+          (and missing? (not d)) (f/set-directory-missing d0)
+          (and missing? d)       (-> d0 (f/set-directory-diff d) (f/set-directory-created)) 
           :else (-> d0 (f/set-directory-diff d) (f/set-directory-untouched)))))
 
 ;; ## Directory Watcher
 
-(defn recursive-directory-watch-fn
-  "Create recursive directory watch function using the given options."
+(defn- recursive-directory-watcher
   [opts]
   (->
     (watch-fn 
       update-directory!
-      (fn [m path]
-        (when-let [ds (apply f/directories path opts)]
-          (reduce #(assoc %1 (:path %2) %2) m ds)))
+      (fn [m f]
+        (let [[path created?] (if (string? f) [f nil] [(first f) true])]
+          (when-let [ds (apply f/directories path opts)] 
+            (let [ds (if created? (map f/set-directory-missing ds) ds)] 
+              (reduce #(assoc %1 (:path %2) %2) m ds)))))
       (fn [m path]
         (when-let [ds (apply f/directories path opts)]
           (reduce #(dissoc %1 (:path %2)) m ds))))
-    (on-directory-create 
-      (fn [w _ path]
-        (watch-entity! w path))) 
-    (on-directory-delete
-      (fn [w _ path]
-        (unwatch-entity! w path)))))  
+    (on-directory-delete #(unwatch-entity! %1 (:path %3)))
+    (on-subdirectory-create #(watch-entity! %1 [%3])) 
+    (on-subdirectory-delete #(unwatch-entity! %1 %3))))
 
-(defn directory-watch-fn
-  "Create single-level directory watch function using the given options."
+(defn- normal-directory-watcher
   [opts]
   (watch-fn
     update-directory!
@@ -75,23 +109,10 @@
       (when-let [d (apply f/directory path opts)]
         (dissoc m (:path d) d)))))
 
-;; ## Simple Directory Watcher
-
-(defn simple-directory-watcher*
-  "Create single-threaded directory watcher."
-  [directories & opts]
-  (let [{:keys [interval recursive]} (apply hash-map opts)
-        directories (if (string? directories) [directories] directories) 
-        w (if recursive
-            (recursive-directory-watch-fn opts)
-            (directory-watch-fn opts))]
-    (-> (sm/simple-watcher w interval)
-      (watch-entities! directories))))
-
-(defn simple-directory-watcher
-  "Create simple, single-threaded directory watcher. Multiple directories may be given as a Seq,
-   a single directory as a string. For options, see `simple-directory-watcher*`"
-  [& args]
-  (if (keyword? (first args))
-    (apply simple-directory-watcher* nil args)
-    (apply simple-directory-watcher* args)))
+(defn directory-watcher
+  "Create directory watch function using the given options."
+  [& {:keys [recursive] :as opts}]
+  (let [opts (apply concat opts)]
+    (if recursive
+      (recursive-directory-watcher opts)
+      (normal-directory-watcher opts))))  

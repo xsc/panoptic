@@ -30,6 +30,8 @@
   [panoptic.watchers.core
    
    wrap-entity-handler
+   after-entity-handler
+   before-entity-handler
    wrap-watch-fn
    watch-entities!
    watch-entity!
@@ -38,10 +40,14 @@
    start-watcher!
    stop-watcher!]
 
+  [panoptic.watchers.simple
+   
+   simple-watcher
+   start-simple-watcher!]
+
   [panoptic.watchers.file
    
-   file-watch-fn
-   simple-file-watcher
+   file-watcher
 
    on-file-create
    on-file-delete
@@ -49,9 +55,7 @@
   
   [panoptic.watchers.directory
    
-   directory-watch-fn
-   recursive-directory-watch-fn
-   simple-directory-watcher
+   directory-watcher
 
    on-directory-file-create
    on-directory-file-delete

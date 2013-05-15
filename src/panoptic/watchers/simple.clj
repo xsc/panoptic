@@ -39,24 +39,6 @@
 ;; ## Watcher Type
 
 (deftype SimpleWatcher [watch-fn interval entities thread-data]
-  PWatchFn
-  (wrap-entity-handler [this f]
-    (when @thread-data
-      (throw (Exception. "Cannot wrap Entity Handler if Watcher is running.")))
-    (SimpleWatcher. 
-      (wrap-entity-handler watch-fn f)
-      interval 
-      (atom @entities) 
-      (atom nil)))
-  (wrap-watch-fn [this f]
-    (when @thread-data
-      (throw (Exception. "Cannot wrap watch function if Watcher is running.")))
-    (SimpleWatcher. 
-      (wrap-watch-fn watch-fn f)
-      interval
-      (atom @entities)
-      (atom nil)))
-
   Watcher
   (watch-entities! [this es]
     (swap! entities #(reduce 
@@ -77,21 +59,45 @@
   (watched-entities [this]
     @entities)
   (start-watcher! [this]
-    (when-let [[ft _] (swap! thread-data #(or % (run-watcher! this watch-fn interval entities)))]
-      ft))
+    (when (swap! thread-data #(or % (run-watcher! this watch-fn interval entities)))
+      this))
   (stop-watcher! [this]
     (when-let [[ft f] @thread-data]
       (reset! thread-data nil)
       (f)
       ft))
+
+  clojure.lang.IDeref
+  (deref [_]
+    (let [[ft _] @thread-data]
+      @ft))
   
   Object
   (toString [this]
     (pr-str @entities)))
 
 (defn simple-watcher
-  "Create generic, single-threaded Watcher using: 
-   - a WatchFn instance
-   - the watch loop interval in milliseconds."
-  [watch-fn interval]
+  "Create and generic, single-threaded Watcher."
+  [watch-fn interval] 
   (SimpleWatcher. watch-fn (or interval 1000) (atom {}) (atom nil)))
+
+(defn start-simple-watcher!*
+  "Create and start generic, single-threaded Watcher using: 
+   - a WatchFn instance
+   - the initial entities to watch
+   - additional options (e.g. the watch loop interval in milliseconds)."
+  [watch-fn initial-entities & {:keys [interval]}]
+  (->
+    (simple-watcher watch-fn interval)
+    (watch-entities! initial-entities)
+    (start-watcher!)))
+
+(defn start-simple-watcher!
+  "Create and start generic, single-threaded Watcher using: 
+   - a WatchFn instance
+   - the initial entities to watch
+   - additional options (e.g. the watch loop interval in milliseconds)."
+  [watch-fn & args]
+  (if (or (not (seq args)) (keyword? (first args))) 
+    (apply start-simple-watcher!* watch-fn nil args)
+    (apply start-simple-watcher!* watch-fn args)))

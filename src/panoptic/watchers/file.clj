@@ -48,10 +48,10 @@
 
 ;; ## File Watcher
 
-(defn file-watch-fn
+(defn file-watcher
   "Create WatchFn for Files."
-  ([] (file-watch-fn nil))
-  ([checker] 
+  ([] (file-watcher nil))
+  ([& {:keys [checker]}] 
    (watch-fn
      (partial update-file! (or checker c/last-modified))
      (fn [m path]
@@ -60,22 +60,3 @@
      (fn [m path]
        (when-let [f (f/file path)]
          (dissoc m (:path f)))))))
-
-;; ## Simple File Watcher
-
-(defn simple-file-watcher*
-  "Create simple, single-threaded file watcher."
-  [files & {:keys [checker interval]}]
-  (let [files (if (string? files) [files] files)]
-    (-> (s/simple-watcher
-          (file-watch-fn checker)
-          interval)
-      (watch-entities! files))))
-
-(defn simple-file-watcher
-  "Create simple, single-threaded file watcher. Multiple files may be given as a Seq,
-   a single file as a string. For options, see `simple-file-watcher*`"
-  [& args]
-  (if (keyword? (first args))
-    (apply simple-file-watcher* nil args)
-    (apply simple-file-watcher* args)))
