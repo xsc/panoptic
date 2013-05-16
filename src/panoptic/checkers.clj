@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.checkers
   (:require [me.raynes.fs :as fs :only [file mod-time exists?]]
-            [panoptic.utils.digest :as cs :only [md5 sha1 sha256]]))
+            [pandect.core :as cs :only [md5 sha1 sha256]]))
 
 ;; ## Protocol
 
