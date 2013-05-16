@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.watchers.core
   (:use [clojure.tools.logging :only [debug info warn error]])
-  (:require [panoptic.utils :as u]))
+  (:require [panoptic.utils.core :as u]))
 
 ;; ## Protocol for WatchFn
 

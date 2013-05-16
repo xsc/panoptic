@@ -3,7 +3,7 @@
   panoptic.data.directory
   (:require [me.raynes.fs :as fs]
             [clojure.set :as s :only [difference]]
-            [panoptic.utils :as u]))
+            [panoptic.utils.core :as u]))
 
 ;; ## Directory Map
 

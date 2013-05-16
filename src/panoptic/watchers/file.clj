@@ -5,7 +5,7 @@
         [clojure.tools.logging :only [error]])
   (:require [panoptic.checkers :as c]
             [panoptic.data.file :as f]
-            [panoptic.utils :as u]))
+            [panoptic.utils.core :as u]))
 
 ;; ## Observation Logic
 

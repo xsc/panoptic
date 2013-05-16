@@ -1,13 +1,11 @@
 (ns ^{:doc "Utility Functions"
       :author "Yannick Scherer"}
-  panoptic.utils
-  (:require [clj-time.core :as t]))
+  panoptic.utils.core)
 
-(let [E (t/epoch)]
-  (defn unix-timestamp
-    "Get Unix Timestamp in Milliseconds"
-    []
-    (t/in-msecs (t/interval E (t/now))))) 
+(defn unix-timestamp
+  "Get Unix Timestamp in Milliseconds"
+  []
+  (System/currentTimeMillis))
 
 (defn update-timestamp
   "Update k timestamp in map."

@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.data.file
   (:require [me.raynes.fs :as fs]
-            [panoptic.utils :as u]))
+            [panoptic.utils.core :as u]))
 
 ;; ## File Map
 ;;

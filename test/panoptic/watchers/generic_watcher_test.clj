@@ -5,7 +5,7 @@
         panoptic.watchers.core
         panoptic.watchers.simple-watchers
         panoptic.watchers.multi-threaded-watchers
-        panoptic.utils))
+        panoptic.utils.core))
 
 (tabular 
   (fact "about generic watchers"

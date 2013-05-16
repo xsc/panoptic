@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.checkers
   (:require [me.raynes.fs :as fs :only [file mod-time exists?]]
-            [digest :as cs :only [md5 sha-1 sha-265]]))
+            [panoptic.utils.digest :as cs :only [md5 sha1 sha256]]))
 
 ;; ## Protocol
 
@@ -41,8 +41,8 @@
 
 (def sha1 
   "Checker that returns the SHA-1 checksum of a file."
-  (create-digest-fn cs/sha-1))
+  (create-digest-fn cs/sha1))
 
 (def sha256 
   "Checker that returns the SHA-265 checksum of a file."
-  (create-digest-fn cs/sha-256))
+  (create-digest-fn cs/sha256))

@@ -3,7 +3,7 @@
   panoptic.watchers.simple-watchers
   (:use [clojure.tools.logging :only [debug info warn error]]
         panoptic.watchers.core)
-  (:require [panoptic.utils :as u])) 
+  (:require [panoptic.utils.core :as u])) 
 
 ;; ## Watcher Loop
 
