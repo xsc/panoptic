@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.logging "0.2.6"]
                  [potemkin "0.2.2"]
-                 [pandect "0.1.0"]
+                 [pandect "0.2.0"]
                  [me.raynes/fs "1.4.0"]]
   :warn-on-reflection true
   :profiles {:dev {:dependencies [[midje "1.5.1"]

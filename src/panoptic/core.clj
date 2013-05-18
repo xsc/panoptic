@@ -66,6 +66,8 @@
   [panoptic.checkers
    
    last-modified
+   adler32
+   crc32
    md5
    sha1
    sha256])

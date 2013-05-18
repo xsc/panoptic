@@ -6,7 +6,7 @@
   (if path
     (do
       (println "Watching" path "...")
-      (let [w (-> (file-watcher :checker sha1)
+      (let [w (-> (file-watcher :checker crc32)
                 (on-create #(println "  " (:path %3) "created." (str "(checksum: " (:checksum %3) ")")))
                 (on-delete #(println "  " (:path %3) "deleted."))
                 (on-modify #(println "  " (:path %3) "modified." (str "(checksum: " (:checksum %3) ")"))))]

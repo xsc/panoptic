@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.checkers
   (:require [me.raynes.fs :as fs :only [file mod-time exists?]]
-            [pandect.core :as cs :only [md5 sha1 sha256]]))
+            [pandect.core :as cs :only [md5 sha1 sha256 adler32 crc32]]))
 
 ;; ## Protocol
 
@@ -46,3 +46,11 @@
 (def sha256 
   "Checker that returns the SHA-265 checksum of a file."
   (create-digest-fn cs/sha256))
+
+(def adler32 
+  "Checker that returns the Adler32 checksum of a file."
+  (create-digest-fn cs/adler32))
+
+(def crc32
+  "Checker that returns the CRC32 checksum of a file."
+  (create-digest-fn cs/crc32))
