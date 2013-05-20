@@ -63,41 +63,48 @@
 
 ;; ## Watch Logic
 ;;
-;; The watcher logic consists of a map of:
-;; - `:update-fn`: a function that takes an entity, performs checks, updates, ...
+;; The watcher logic is a type with the following keys/fields: 
+;; - `update-fn`: a function that takes an entity, performs checks, updates, ...
 ;;   and returns the updated entity
-;; - `:add-fn`: a function that takes a map and an entity description (e.g. a
+;; - `add-fn`: a function that takes a map and an entity description (e.g. a
 ;;   file path) and returns a new map with the additional entities.
-;; - `:remove-fn`: a function that takes a map and an entity description and returns
+;; - `remove-fn`: a function that takes a map and an entity description and returns
 ;;   a new map without the desired entities.
-;; - `:handle-fn`: a function that takes a watcher, an entity key and the entity and 
+;; - `handle-fn`: a function that takes a watcher, an entity key and the entity and 
 ;;   performs any tasks changes to the entity require
-;;
 
-(defrecord WatchFn [update-fn add-fn remove-fn handle-fn]
-  WatchFunction
-  (update-function [this] update-fn)
-  (entity-handler [this] handle-fn)
-  (add-entities [this m es]
-    (let [f (or add-fn #(assoc %1 %2 %2))]
-      (reduce
-        (fn [m e]
-          (or (f m e) m)) 
-        m es)))
-  (remove-entities [this m es]
-    (let [f (or remove-fn dissoc)]
-      (reduce
-        (fn [m e]
-          (or (f m e) m)) 
-        m es)))
-  (wrap-entity-handler [this f]
-    (when-not (fn? f)
-      (throw (Exception. "expects a function as second parameter.")))
-    (assoc this :handle-fn (f handle-fn)))
-  (wrap-watch-fn [this f]
-    (when-not (fn? f)
-      (throw (Exception. "expects a function as second parameter.")))
-    (assoc this :update-fn (f update-fn))))
+(defmacro defwatch
+  [id & entity-handlers]
+  `(deftype ~id [update-fn# add-fn# remove-fn# handle-fn#]
+     WatchFunction
+     (update-function [this#] update-fn#)
+     (entity-handler [this#] handle-fn#)
+     (add-entities [this# m# es#]
+       (let [f# (or add-fn# #(assoc %1 %2 %2))]
+         (reduce
+           (fn [m# e#]
+             (or (f# m# e#) m#)) 
+           m# es#)))
+     (remove-entities [this# m# es#]
+       (let [f# (or remove-fn# dissoc)]
+         (reduce
+           (fn [m# e#]
+             (or (f# m# e#) m#)) 
+           m# es#)))
+     (wrap-entity-handler [this# f#]
+       (when-not (fn? f#)
+         (throw (Exception. "expects a function as second parameter.")))
+       (new ~id update-fn# add-fn# remove-fn# (f# handle-fn#)))
+     (wrap-watch-fn [this# f#]
+       (when-not (fn? f#)
+         (throw (Exception. "expects a function as second parameter.")))
+       (new ~id (f# update-fn#) add-fn# remove-fn# handle-fn#))
+     
+     ~@entity-handlers))
+
+;; ## Generic WatchFn
+
+(defwatch WatchFn)
 
 (defn watch-fn
   "Create new WatchFn."
@@ -139,16 +146,20 @@
   (on-modify [this f])
   (on-delete [this f]))
 
-(extend-type WatchFn
-  StandardEntityHandlers
-  (on-flag [this flag f]
-    (after-entity-handler
-      this
-      #(when (get %3 flag)
-         (f %1 %2 %3))))
-  (on-create [this f]
-    (on-flag this :created f))
-  (on-modify [this f]
-    (on-flag this :modified f))
-  (on-delete [this f]
-    (on-flag this :deleted f)))
+(defmacro with-standard-handlers!
+  [c]
+  `(extend-type ~c
+     StandardEntityHandlers
+     (on-flag [this# flag# f#]
+       (after-entity-handler
+         this#
+         #(when (get %3 flag#)
+            (f# %1 %2 %3))))
+     (on-create [this# f#]
+       (on-flag this# :created f#))
+     (on-modify [this# f#]
+       (on-flag this# :modified f#))
+     (on-delete [this# f#]
+       (on-flag this# :deleted f#))))
+
+

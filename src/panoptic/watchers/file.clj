@@ -29,15 +29,19 @@
 
 ;; ## File Watcher
 
+(defwatch FileWatcher)
+(with-standard-handlers! FileWatcher)
+
 (defn file-watcher
   "Create WatchFn for Files."
   ([] (file-watcher nil))
   ([& {:keys [checker]}] 
-   (watch-fn
+   (FileWatcher.
      (partial update-file! (or checker c/crc32))
      (fn [m path]
        (when-let [f (f/file path)]
          (assoc m (:path f) f)))
      (fn [m path]
        (when-let [f (f/file path)]
-         (dissoc m (:path f)))))))
+         (dissoc m (:path f))))
+     nil)))

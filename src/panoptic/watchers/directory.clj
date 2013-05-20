@@ -10,7 +10,7 @@
 
 ;; ## Handlers for Directories
 
-(defprotocol DirectoryWatchFn
+(defprotocol DirectoryEntityHandlers
   (on-subdirectory-create [this f])
   (on-subdirectory-delete [this f])
   (on-file-create [this f])
@@ -24,8 +24,10 @@
        (doseq [e s]
          (f %1 %3 (create-fn (str (:path %3) "/" e)))))))
 
-(extend-type panoptic.watchers.core.WatchFn
-  DirectoryWatchFn
+;; ## Directory Watcher
+
+(defwatch DirectoryWatcher
+  DirectoryEntityHandlers
   (on-subdirectory-create [this f] 
     (on-directory-change :created-dirs f/directory this f))
   (on-subdirectory-delete [this f] 
@@ -34,6 +36,7 @@
     (on-directory-change :created-files fs/file this f))
   (on-file-delete [this f] 
     (on-directory-change :deleted-files fs/file this f)))
+(with-standard-handlers! DirectoryWatcher)
 
 ;; ## Watching Directories
 
@@ -52,7 +55,7 @@
 (defn- recursive-directory-watcher
   [opts]
   (->
-    (watch-fn 
+    (DirectoryWatcher.
       update-directory!
       (fn [m f]
         (let [[path created?] (if (string? f) [f nil] [(first f) true])]
@@ -61,20 +64,22 @@
               (reduce #(assoc %1 (:path %2) %2) m ds)))))
       (fn [m path]
         (when-let [ds (apply f/directories path opts)]
-          (reduce #(dissoc %1 (:path %2)) m ds))))
+          (reduce #(dissoc %1 (:path %2)) m ds)))
+      nil)
     (on-subdirectory-create #(watch-entity! %1 [(:path %3)])) 
     (on-subdirectory-delete #(unwatch-entity! %1 (:path %3)))))
 
 (defn- normal-directory-watcher
   [opts]
-  (watch-fn
+  (DirectoryWatcher.
     update-directory!
     (fn [m path]
       (when-let [d (apply f/directory path opts)]
         (assoc m (:path d) d)))
     (fn [m path]
       (when-let [d (apply f/directory path opts)]
-        (dissoc m (:path d) d)))))
+        (dissoc m (:path d) d)))
+    nil))
 
 (defn directory-watcher
   "Create directory watch function using the given options."
