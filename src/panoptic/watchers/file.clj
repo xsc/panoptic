@@ -29,19 +29,32 @@
 
 ;; ## File Watcher
 
-(defwatch FileWatcher)
-(with-standard-handlers! FileWatcher)
+(defprotocol FileEntityHandlers
+  (on-file-create [this f])
+  (on-file-modify [this f])
+  (on-file-delete [this f]))
+
+(defn- on-flag [flag watch-fn f]
+  (after-entity-handler
+    watch-fn
+    #(when (get %3 flag)
+       (f %1 %2 %3))))
+
+(defwatch FileWatcher
+  FileEntityHandlers
+  (on-file-create [this f] (on-flag :created this f))
+  (on-file-modify [this f] (on-flag :modified this f))
+  (on-file-delete [this f] (on-flag :deleted this f)))
 
 (defn file-watcher
   "Create WatchFn for Files."
-  ([] (file-watcher nil))
-  ([& {:keys [checker]}] 
-   (FileWatcher.
-     (partial update-file! (or checker c/crc32))
-     (fn [m path]
-       (when-let [f (f/file path)]
-         (assoc m (:path f) f)))
-     (fn [m path]
-       (when-let [f (f/file path)]
-         (dissoc m (:path f))))
-     nil)))
+  [& {:keys [checker]}] 
+  (FileWatcher.
+    (partial update-file! (or checker c/crc32))
+    (fn [m path]
+      (when-let [f (f/file path)]
+        (assoc m (:path f) f)))
+    (fn [m path]
+      (when-let [f (f/file path)]
+        (dissoc m (:path f))))
+    nil))

@@ -11,10 +11,12 @@
 ;; ## Handlers for Directories
 
 (defprotocol DirectoryEntityHandlers
-  (on-subdirectory-create [this f])
-  (on-subdirectory-delete [this f])
-  (on-file-create [this f])
-  (on-file-delete [this f]))
+  (on-directory-create [this f])
+  (on-directory-delete [this f])
+  (on-subfile-create [this f])
+  (on-subfile-delete [this f])
+  (on-subdirectory-create [this f]) 
+  (on-subdirectory-delete [this f])) 
 
 (defn- on-directory-change
   [set-key create-fn watch-fn f]
@@ -24,19 +26,22 @@
        (doseq [e s]
          (f %1 %3 (create-fn (str (:path %3) "/" e)))))))
 
+(defn- on-flag [flag watch-fn f]
+  (after-entity-handler
+    watch-fn
+    #(when (get %3 flag)
+       (f %1 %2 %3))))
+
 ;; ## Directory Watcher
 
 (defwatch DirectoryWatcher
   DirectoryEntityHandlers
-  (on-subdirectory-create [this f] 
-    (on-directory-change :created-dirs f/directory this f))
-  (on-subdirectory-delete [this f] 
-    (on-directory-change :deleted-dirs f/directory this f))
-  (on-file-create [this f] 
-    (on-directory-change :created-files fs/file this f))
-  (on-file-delete [this f] 
-    (on-directory-change :deleted-files fs/file this f)))
-(with-standard-handlers! DirectoryWatcher)
+  (on-directory-create [this f] (on-flag :created this f))
+  (on-directory-delete [this f] (on-flag :deleted this f))
+  (on-subfile-create [this f] (on-directory-change :created-files fs/file this f))
+  (on-subfile-delete [this f] (on-directory-change :deleted-files fs/file this f) )
+  (on-subdirectory-create [this f] (on-directory-change :created-dirs f/directory this f) ) 
+  (on-subdirectory-delete [this f] (on-directory-change :deleted-dirs f/directory this f) ))
 
 ;; ## Watching Directories
 

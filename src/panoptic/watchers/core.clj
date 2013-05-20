@@ -137,29 +137,3 @@
   "Remove single Entity from Watch List."
   [w e]
   (unwatch-entities! w [e]))
-
-;; ## Generic Handlers (for entity maps)
-
-(defprotocol StandardEntityHandlers
-  (on-flag [this flag f])
-  (on-create [this f])
-  (on-modify [this f])
-  (on-delete [this f]))
-
-(defmacro with-standard-handlers!
-  [c]
-  `(extend-type ~c
-     StandardEntityHandlers
-     (on-flag [this# flag# f#]
-       (after-entity-handler
-         this#
-         #(when (get %3 flag#)
-            (f# %1 %2 %3))))
-     (on-create [this# f#]
-       (on-flag this# :created f#))
-     (on-modify [this# f#]
-       (on-flag this# :modified f#))
-     (on-delete [this# f#]
-       (on-flag this# :deleted f#))))
-
-
