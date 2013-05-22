@@ -1,12 +1,15 @@
 (ns ^{:doc "Tests for generic Watchers."
       :author "Yannick Scherer"}
   panoptic.runners.generic-runner-test
+  (:require [taoensso.timbre :as timbre])
   (:use midje.sweet
         panoptic.watchers.core
         panoptic.runners.core
         panoptic.runners.simple
         panoptic.runners.multi-threaded
         panoptic.utils.core))
+
+(timbre/set-level! :warn)
 
 (tabular 
   (fact "about generic runners"

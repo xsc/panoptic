@@ -1,7 +1,7 @@
 (ns ^{:doc "Multi-Threaded Watch Runners"
       :author "Yannick Scherer"}
   panoptic.runners.multi-threaded
-  (:use [clojure.tools.logging :only [debug info warn error]]
+  (:use [taoensso.timbre :only [debug info warn error]]
         panoptic.runners.core
         panoptic.watchers.core)
   (:require [panoptic.utils.core :as u]

@@ -1,7 +1,7 @@
 (ns ^{:doc "Simple, single-threaded Watch Runners."
       :author "Yannick Scherer"}
   panoptic.runners.simple
-  (:use [clojure.tools.logging :only [debug info warn error]]
+  (:use [taoensso.timbre :only [debug info warn error]]
         panoptic.watchers.core
         panoptic.runners.core)
   (:require [panoptic.utils.core :as u])) 

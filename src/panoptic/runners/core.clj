@@ -1,7 +1,7 @@
 (ns ^{:doc "Common Runner Logic"
       :author "Yannick Scherer"}
   panoptic.runners.core
-  (:use [clojure.tools.logging :only [debug info warn error]]
+  (:use [taoensso.timbre :only [trace debug info warn error]]
         panoptic.watchers.core)
   (:require [panoptic.utils.core :as u]))
 
@@ -16,7 +16,7 @@
       (keep 
         (fn [[k x]]
           (when x
-            (debug tag "* Updating Entity:" k)
+            (trace tag "* Updating Entity:" k)
             (when-let [f (update-entity! watch-fn w k x)]
               [k f]))))
       (into {}))
@@ -43,9 +43,9 @@
                               (when-let [es (seq @entities)]
                                 (debug tag "Running Entity Handlers ...")   
                                 (doseq [[k x] es]
-                                  (debug tag "* Running Entity Handler on:" k)
+                                  (trace tag "* Running Entity Handler on:" k)
                                   (run-entity-handler! watch-fn w k x)))
-                              (debug tag "Sleeping" interval "milliseconds ...") 
+                              (trace tag "Sleeping" interval "milliseconds ...") 
                               (u/sleep interval) 
                               (recur)))
                           (info tag "Watcher Thread stopped."))]

@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.watchers.file-watcher
   (:use panoptic.watchers.core
-        [clojure.tools.logging :only [error]])
+        [taoensso.timbre :only [error]])
   (:require [panoptic.data.file :as f]
             [panoptic.utils.fs :as fs :only [file-exists? last-modified]]
             [pandect.core :as cs]))

@@ -1,7 +1,7 @@
 (ns ^{:doc "Watcher Basics"
       :author "Yannick Scherer"}
   panoptic.watchers.core
-  (:use [clojure.tools.logging :only [debug info warn error]])
+  (:use [taoensso.timbre :only [debug info warn error]])
   (:require [panoptic.utils.core :as u]))
 
 ;; ## Protocol for WatchFn
