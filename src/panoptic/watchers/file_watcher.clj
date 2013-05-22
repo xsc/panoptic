@@ -18,8 +18,15 @@
 
 (defmulti checksum-fn 
   "Get function used to compute file checksum."
-  identity
+  (fn [k] 
+    (if (fn? k)
+      ::fn
+      k))
   :default :crc32)
+
+(defmethod checksum-fn ::fn
+  [f]
+  f)
 
 (defn- wrap-checksum
   [f]

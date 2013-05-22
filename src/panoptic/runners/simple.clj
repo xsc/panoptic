@@ -19,13 +19,16 @@
   (watched-entities [this]
     @entities)
   (start-watcher! [this]
-    (swap! thread-data #(or % (run-watcher-thread! id this watch-fn interval entities)))
+    (dosync
+      (when-not @thread-data
+        (ref-set thread-data (run-watcher-thread! id this watch-fn interval entities))))
     this)
   (stop-watcher! [this]
-    (when-let [[ft f] @thread-data]
-      (reset! thread-data nil)
-      (f)
-      ft))
+    (dosync
+      (when-let [[ft f] @thread-data]
+        (ref-set thread-data nil)
+        (f)
+        ft)))
 
   clojure.lang.IDeref
   (deref [_]
@@ -46,11 +49,11 @@
   "Create a generic, single-threaded Watcher."
   [watch-fn interval] 
   (SimpleWatcher. 
-    (keyword (gensym "watcher-")) 
+    (keyword (gensym "simple-watcher-")) 
     watch-fn 
     (or interval 1000) 
     (ref {}) 
-    (atom nil)))
+    (ref nil)))
 
 (defn start-simple-watcher!*
   "Create and start generic, single-threaded Watcher using: 

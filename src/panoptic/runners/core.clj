@@ -24,7 +24,10 @@
       (error ex "in `run-entity-watcher!'"))))
 
 (defn run-watcher-thread!
-  "Run Watcher Loop. Returns a vector of `[thread-future stop-function]`."
+  "Run Watcher Loop. Returns a vector of `[thread-future stop-function]`.
+   `entities` has to be a ref. An optional offset can be given that let's the
+   thread wait the given number of milliseconds before the first polling
+   operation."
   ([id w watch-fn interval entities]
    (run-watcher-thread! id w watch-fn interval entities nil))
   ([id w watch-fn interval entities offset]
@@ -33,21 +36,18 @@
            watch-future (future
                           (when (and offset (pos? offset)) (u/sleep offset))
                           (info tag "Watcher Thread running ...")
-                          (let [entities-to-handle (ref nil)]
-                            (loop []
-                              (when-not @stop?
-                                (debug tag "Running Entity Updaters ...")
-                                (dosync
-                                  (when-let [es (run-entity-watcher! tag w watch-fn @entities)] 
-                                    (ref-set entities es)
-                                    (ref-set entities-to-handle es))) 
-                                (debug tag "Running Entity Handlers ...") 
-                                (doseq [[k x] @entities-to-handle]
+                          (loop []
+                            (when-not @stop?
+                              (debug tag "Running Entity Updaters ...")
+                              (dosync (alter entities #(run-entity-watcher! tag w watch-fn %))) 
+                              (when-let [es (seq @entities)]
+                                (debug tag "Running Entity Handlers ...")   
+                                (doseq [[k x] es]
                                   (debug tag "* Running Entity Handler on:" k)
-                                  (run-entity-handler! watch-fn w k x))
-                                (debug tag "Sleeping" interval "milliseconds ...") 
-                                (u/sleep interval) 
-                                (recur))))
+                                  (run-entity-handler! watch-fn w k x)))
+                              (debug tag "Sleeping" interval "milliseconds ...") 
+                              (u/sleep interval) 
+                              (recur)))
                           (info tag "Watcher Thread stopped."))]
        (vector watch-future #(reset! stop? true)))))) 
 

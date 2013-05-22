@@ -29,9 +29,9 @@
 
 (defn- update-directory!
   "Check the given directory for new files/subdirectories, returning `nil` if it was deleted."
-  [{:keys [missing deleted] :as d0}]
+  [refresh-fn {:keys [missing deleted] :as d0}]
   (let [missing? (or missing deleted)
-        d (f/refresh-directory d0)]
+        d (refresh-fn d0)]
     (cond (not (or missing? d))  (-> d0 (f/set-directory-diff d) (f/set-directory-deleted)) 
           (and missing? (not d)) (f/set-directory-missing d0)
           (and missing? d)       (-> d0 (f/set-directory-diff d) (f/set-directory-created)) 
@@ -54,10 +54,10 @@
   (on-file-modify [this f] nil))
 
 (defn- recursive-directory-watcher
-  [opts]
+  [refresh-fn opts]
   (->
     (recursive-directory-watcher*
-      update-directory!
+      (partial update-directory! refresh-fn) 
       (fn [m f]
         (let [[path created?] (if (string? f) [f nil] [(first f) true])]
           (when-let [ds (apply f/directories path opts)] 
@@ -90,9 +90,9 @@
   (on-file-modify [this f] nil))
 
 (defn- normal-directory-watcher
-  [opts]
+  [refresh-fn opts]
   (normal-directory-watcher*
-    update-directory!
+    (partial update-directory! refresh-fn) 
     (fn [m path]
       (when-let [d (apply f/directory path opts)]
         (assoc m (:path d) d)))
@@ -104,8 +104,9 @@
 
 (defn directory-watcher
   "Create directory watch function using the given options."
-  [& {:keys [recursive] :as opts}]
-  (let [opts (apply concat opts)]
+  [& {:keys [recursive refresh] :as opts}]
+  (let [opts (apply concat opts)
+        refresh (or refresh f/refresh-directory)]
     (if recursive
-      (recursive-directory-watcher opts)
-      (normal-directory-watcher opts))))  
+      (recursive-directory-watcher refresh opts)
+      (normal-directory-watcher refresh opts))))  

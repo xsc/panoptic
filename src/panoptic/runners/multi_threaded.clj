@@ -66,11 +66,11 @@
         (ref-set thread-data (run-multi-watcher! id this watch-fn interval @entities))))
     this)
   (stop-watcher! [this]
-    (when-let [[ft f] @thread-data]
-      (dosync
-        (ref-set thread-data nil))
-      (f)
-      ft))
+    (dosync
+      (when-let [[ft f] @thread-data]
+        (ref-set thread-data nil)
+        (f)
+        ft)))
 
   clojure.lang.IDeref
   (deref [_]
@@ -93,7 +93,7 @@
   [watch-fn thread-count interval] 
   (let [thread-count (or thread-count 2)]
     (MultiWatcher. 
-      (keyword (gensym "watcher-")) 
+      (keyword (gensym "multi-watcher-")) 
       watch-fn
       thread-count
       (or interval 1000) 
