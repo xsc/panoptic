@@ -22,9 +22,9 @@ __Watching (possibly non-existing) Files__
 
 (def watcher
   (-> (file-watcher :checker md5)
-    (on-modify #(println (:path %3) "changed"))
-    (on-create #(println (:path %3) "created"))
-    (on-delete #(println (:path %3) "deleted"))
+    (on-file-modify #(println (:path %3) "changed"))
+    (on-file-create #(println (:path %3) "created"))
+    (on-file-delete #(println (:path %3) "deleted"))
     (start-simple-watcher! ["log.txt" "error.txt"] :interval 500)))
 
 ...
@@ -39,8 +39,8 @@ __Watching Directories__
 
 (def watcher
   (-> (directory-watcher :recursive true :extensions [:clj])
-    (on-create #(println "Directory" (:path %3) "created"))
-    (on-delete #(println "Directory" (:path %3) "deleted"))
+    (on-directory-create #(println "Directory" (:path %3) "created"))
+    (on-directory-delete #(println "Directory" (:path %3) "deleted"))
     (on-file-create #(println "File" (:path %3) "created"))
     (on-file-delete #(println "File" (:path %3) "deleted"))
     (start-simple-watcher! ["/path/to/directory"] :interval 500)))
