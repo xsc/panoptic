@@ -21,7 +21,7 @@ __Watching (possibly non-existing) Files__
 (use 'panoptic.core)
 
 (def watcher
-  (-> (file-watcher :checker md5)
+  (-> (file-watcher :checksum :md5)
     (on-file-modify #(println (:path %3) "changed"))
     (on-file-create #(println (:path %3) "created"))
     (on-file-delete #(println (:path %3) "deleted"))
