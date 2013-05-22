@@ -5,7 +5,6 @@
         panoptic.watchers.file)
   (:require [clojure.set :as s :only [difference]]
             [panoptic.runners.core :as r]
-            [panoptic.checkers :as c]
             [panoptic.data.file :as fs]
             [panoptic.data.directory :as f]
             [panoptic.utils.core :as u]))

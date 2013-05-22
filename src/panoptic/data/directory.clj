@@ -1,9 +1,9 @@
 (ns ^{:doc "Directory Representation"
       :author "Yannick Scherer"}
   panoptic.data.directory
-  (:require [me.raynes.fs :as fs]
-            [clojure.set :as s :only [difference]]
-            [panoptic.utils.core :as u]))
+  (:require [panoptic.utils.fs :as fs]
+            [panoptic.utils.core :as u]
+            [clojure.set :as s :only [difference]]))
 
 ;; ## Directory Map
 
@@ -28,28 +28,26 @@
                            (let [ext (set (map #(str "." (if (keyword? %) (name %) (str %))) extensions))]
                              #(contains? ext (fs/extension %))))]
     (when-not (fs/file? f) 
-      (let [path (fs/absolute-path f)
-            children (when (fs/exists? f) (fs/list-dir f))]
+      (let [path (fs/absolute-path f)]
         (-> (if (fs/exists? f) {} {:missing true})
           (assoc :path path)
           (assoc :opts opts)
           (assoc :files 
-                 (->> children
-                   (filter #(fs/file? (str path "/" %)))
+                 (->> (fs/list-files f)
+                   (filter #(or include-hidden (not (fs/hidden? %))))
                    (filter valid-extension?)
                    (filter include-file?)
                    (set)))
           (assoc :directories 
-                 (->> children
-                   (filter #(fs/directory? (str path "/" %)))
-                   (filter #(or include-hidden (not (.startsWith ^String % "."))))
+                 (->> (fs/list-directories f)
+                   (filter #(or include-hidden (not (fs/hidden? %))))
                    (filter include-dir?)
                    (set))))))))
 
 (defn refresh-directory
   "Create current state of given Directory."
   [{:keys [path opts]}]
-  (when (and (fs/directory? path) (fs/exists? path))
+  (when (fs/directory-exists? path)
     (apply directory path opts)))
 
 (defn directories

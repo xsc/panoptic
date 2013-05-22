@@ -4,8 +4,7 @@
   (:use [potemkin :only [import-vars]])
   (:require [panoptic.watchers core file directory]
             [panoptic.runners simple multi-threaded]
-            [panoptic.data file directory]
-            panoptic.checkers))
+            [panoptic.data file directory]))
 
 ;; ## Concept
 ;;
@@ -62,13 +61,4 @@
    directory-watcher
 
    on-directory-create
-   on-directory-delete]
-  
-  [panoptic.checkers
-   
-   last-modified
-   adler32
-   crc32
-   md5
-   sha1
-   sha256])
+   on-directory-delete])

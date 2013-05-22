@@ -1,7 +1,7 @@
 (ns ^{:doc "File Representation"
       :author "Yannick Scherer"}
   panoptic.data.file
-  (:require [me.raynes.fs :as fs]
+  (:require [panoptic.utils.fs :as fs]
             [panoptic.utils.core :as u]))
 
 ;; ## File Map

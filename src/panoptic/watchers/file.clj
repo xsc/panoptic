@@ -3,9 +3,9 @@
   panoptic.watchers.file
   (:use panoptic.watchers.core
         [clojure.tools.logging :only [error]])
-  (:require [panoptic.checkers :as c]
-            [panoptic.data.file :as f]
-            [panoptic.utils.core :as u]))
+  (:require [panoptic.data.file :as f]
+            [panoptic.utils.fs :as fs :only [file-exists? last-modified]]
+            [pandect.core :as cs]))
 
 ;; ## Protocol
 
@@ -14,6 +14,21 @@
   (on-file-modify [this f])
   (on-file-delete [this f]))
 
+;; ## Checksums
+
+(defmulti checksum-fn 
+  "Get function used to compute file checksum."
+  identity
+  :default :crc32)
+
+(defmethod checksum-fn :last-modified [_] fs/last-modified)
+(defmethod checksum-fn :crc32 [_] cs/crc32-file)
+(defmethod checksum-fn :adler32 [_] cs/adler32-file)
+(defmethod checksum-fn :md5 [_] cs/md5-file)
+(defmethod checksum-fn :sha1 [_] cs/sha1-file)
+(defmethod checksum-fn :sha256 [_] cs/sha256-file)
+(defmethod checksum-fn :sha512 [_] cs/sha512-file)
+
 ;; ## Logic
 
 (defn- update-file!
@@ -21,7 +36,7 @@
    an updated file map."
   [checker {:keys [checked path checksum] :as f}]
   (try
-    (let [chk (c/file-checksum checker path)]
+    (let [chk (when (fs/file-exists? path) (checker path))]
       (condp = [checksum chk]
         [nil nil] (f/set-file-missing f)
         [chk chk] (f/set-file-untouched f chk)
@@ -44,12 +59,13 @@
 
 (defn file-watcher
   "Create WatchFn for Files."
-  [& {:keys [checker]}] 
-  (file-watcher*
-    (partial update-file! (or checker c/crc32))
-    (fn [m path]
-      (when-let [f (f/file path)]
-        (assoc m (:path f) f)))
-    (fn [m path]
-      (when-let [f (f/file path)]
-        (dissoc m (:path f))))))
+  [& {:keys [checksum]}] 
+  (let [checker (checksum-fn checksum)]
+    (file-watcher*
+      (partial update-file! (or checker cs/crc32-file))
+      (fn [m path]
+        (when-let [f (f/file path)]
+          (assoc m (:path f) f)))
+      (fn [m path]
+        (when-let [f (f/file path)]
+          (dissoc m (:path f)))))))
