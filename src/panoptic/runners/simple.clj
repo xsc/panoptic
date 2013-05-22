@@ -11,10 +11,10 @@
 (deftype SimpleWatcher [id watch-fn interval entities thread-data]
   WatchRunner
   (watch-entities! [this es]
-    (swap! entities #(add-entities watch-fn % es))
+    (dosync (alter entities #(add-entities watch-fn % es))) 
     this)
   (unwatch-entities! [this es]
-    (swap! entities #(remove-entities watch-fn % es))
+    (dosync (alter entities #(remove-entities watch-fn % es))) 
     this)
   (watched-entities [this]
     @entities)
@@ -30,20 +30,26 @@
   clojure.lang.IDeref
   (deref [_]
     (let [[ft _] @thread-data]
-      @ft))
+      (when ft @ft)))
   
   Object
   (toString [this]
     (pr-str @entities)))
 
+(defmethod print-method SimpleWatcher
+  [o w]
+  (print-simple 
+    (str "#<SimpleWatcher: " (.toString o) ">")
+    w))
+
 (defn simple-watcher
-  "Create and generic, single-threaded Watcher."
+  "Create a generic, single-threaded Watcher."
   [watch-fn interval] 
   (SimpleWatcher. 
     (keyword (gensym "watcher-")) 
     watch-fn 
     (or interval 1000) 
-    (atom {}) 
+    (ref {}) 
     (atom nil)))
 
 (defn start-simple-watcher!*

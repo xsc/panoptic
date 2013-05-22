@@ -41,6 +41,11 @@
    simple-watcher
    start-simple-watcher!]
 
+  [panoptic.runners.multi-threaded
+   
+   multi-watcher
+   start-multi-watcher!]
+
   [panoptic.watchers.core
    
    wrap-entity-handler

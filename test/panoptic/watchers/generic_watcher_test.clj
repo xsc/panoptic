@@ -28,4 +28,5 @@
         stop => future?
         (deref stop) => falsey)))
   ?runner
-  simple-watcher) 
+  simple-watcher
+  #(multi-watcher %1 2 %2))
