@@ -10,12 +10,13 @@
 (defn- run-entity-watcher!
   "Run the given watcher function over the given entity map, using the given handler
    function."
-  [w watch-fn entities]
+  [tag w watch-fn entities]
   (try 
     (->> entities
       (keep 
         (fn [[k x]]
           (when x
+            (debug tag "* Updating Entity:" k)
             (when-let [f (update-entity! watch-fn w k x)]
               [k f]))))
       (into {}))
@@ -24,17 +25,28 @@
 
 (defn run-watcher-thread!
   "Run Watcher Loop"
-  [w watch-fn interval entities]
-  (let [stop? (atom false)
-        watch-future (future
-                       (loop []
-                         (when-not @stop?
-                           (when-let [es (swap! entities #(run-entity-watcher! w watch-fn %))] 
-                             (doseq [[k x] es]
-                               (run-entity-handler! watch-fn w k x)) 
-                             (u/sleep interval) 
-                             (recur)))))]
-    (vector watch-future #(reset! stop? true)))) 
+  [id w watch-fn interval entities]
+  (let [tag (str "[" id "]")]
+    (info tag "Starting Watcher ...")
+    (let [stop? (atom false)
+          watch-future (future
+                         (info tag "Watcher started.")
+                         (loop []
+                           (when-not @stop?
+                             (debug tag "Running Entity Updaters ...")
+                             (when-let [es (swap! entities #(run-entity-watcher! tag w watch-fn %))] 
+                               (debug tag "Running Entity Handlers ...")
+                               (doseq [[k x] es]
+                                 (debug tag "* Running Entity Handler on:" k)
+                                 (run-entity-handler! watch-fn w k x)) 
+                               (debug tag "Sleeping" interval "milliseconds ...")
+                               (u/sleep interval) 
+                               (recur))))
+                         (info tag "Watcher stopped."))]
+      (vector watch-future 
+              (fn []
+                (info tag "Stopping Watcher ...")
+                (reset! stop? true)))))) 
 
 ;; ## WatchRunner Protocol
 

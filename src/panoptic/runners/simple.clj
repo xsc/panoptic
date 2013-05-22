@@ -8,7 +8,7 @@
 
 ;; ## Watcher Type
 
-(deftype SimpleWatcher [watch-fn interval entities thread-data]
+(deftype SimpleWatcher [id watch-fn interval entities thread-data]
   WatchRunner
   (watch-entities! [this es]
     (swap! entities #(add-entities watch-fn % es))
@@ -19,7 +19,7 @@
   (watched-entities [this]
     @entities)
   (start-watcher! [this]
-    (swap! thread-data #(or % (run-watcher-thread! this watch-fn interval entities)))
+    (swap! thread-data #(or % (run-watcher-thread! id this watch-fn interval entities)))
     this)
   (stop-watcher! [this]
     (when-let [[ft f] @thread-data]
@@ -39,7 +39,12 @@
 (defn simple-watcher
   "Create and generic, single-threaded Watcher."
   [watch-fn interval] 
-  (SimpleWatcher. watch-fn (or interval 1000) (atom {}) (atom nil)))
+  (SimpleWatcher. 
+    (keyword (gensym "watcher-")) 
+    watch-fn 
+    (or interval 1000) 
+    (atom {}) 
+    (atom nil)))
 
 (defn start-simple-watcher!*
   "Create and start generic, single-threaded Watcher using: 
