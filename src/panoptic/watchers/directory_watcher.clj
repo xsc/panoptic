@@ -1,8 +1,8 @@
 (ns ^{:doc "Directory Watchers"
       :author "Yannick Scherer"}
-  panoptic.watchers.directory
+  panoptic.watchers.directory-watcher
   (:use panoptic.watchers.core
-        panoptic.watchers.file)
+        panoptic.watchers.file-watcher)
   (:require [clojure.set :as s :only [difference]]
             [panoptic.runners.core :as r]
             [panoptic.data.file :as fs]

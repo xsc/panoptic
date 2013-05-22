@@ -1,6 +1,6 @@
 (ns ^{:doc "File Watchers"
       :author "Yannick Scherer"}
-  panoptic.watchers.file
+  panoptic.watchers.file-watcher
   (:use panoptic.watchers.core
         [clojure.tools.logging :only [error]])
   (:require [panoptic.data.file :as f]
@@ -21,13 +21,17 @@
   identity
   :default :crc32)
 
-(defmethod checksum-fn :last-modified [_] fs/last-modified)
-(defmethod checksum-fn :crc32 [_] cs/crc32-file)
-(defmethod checksum-fn :adler32 [_] cs/adler32-file)
-(defmethod checksum-fn :md5 [_] cs/md5-file)
-(defmethod checksum-fn :sha1 [_] cs/sha1-file)
-(defmethod checksum-fn :sha256 [_] cs/sha256-file)
-(defmethod checksum-fn :sha512 [_] cs/sha512-file)
+(defn- wrap-checksum
+  [f]
+  #(when (fs/exists? %) (f %)))
+
+(defmethod checksum-fn :last-modified [_] (wrap-checksum fs/last-modified))
+(defmethod checksum-fn :crc32 [_] (wrap-checksum cs/crc32-file))
+(defmethod checksum-fn :adler32 [_] (wrap-checksum cs/adler32-file))
+(defmethod checksum-fn :md5 [_] (wrap-checksum cs/md5-file))
+(defmethod checksum-fn :sha1 [_] (wrap-checksum cs/sha1-file))
+(defmethod checksum-fn :sha256 [_] (wrap-checksum cs/sha256-file))
+(defmethod checksum-fn :sha512 [_] (wrap-checksum cs/sha512-file))
 
 ;; ## Logic
 
@@ -36,7 +40,7 @@
    an updated file map."
   [checker {:keys [checked path checksum] :as f}]
   (try
-    (let [chk (when (fs/file-exists? path) (checker path))]
+    (let [chk (checker path)]
       (condp = [checksum chk]
         [nil nil] (f/set-file-missing f)
         [chk chk] (f/set-file-untouched f chk)

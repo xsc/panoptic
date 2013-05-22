@@ -2,7 +2,7 @@
       :author "Yannick Scherer"}
   panoptic.core
   (:use [potemkin :only [import-vars]])
-  (:require [panoptic.watchers core file directory]
+  (:require [panoptic.watchers core file-watcher directory-watcher]
             [panoptic.runners simple multi-threaded]
             [panoptic.data file directory]))
 
@@ -48,7 +48,7 @@
    before-entity-handler
    wrap-watch-fn]
 
-  [panoptic.watchers.file
+  [panoptic.watchers.file-watcher
    
    file-watcher
    
@@ -56,7 +56,7 @@
    on-file-modify
    on-file-delete]
   
-  [panoptic.watchers.directory
+  [panoptic.watchers.directory-watcher
    
    directory-watcher
 
