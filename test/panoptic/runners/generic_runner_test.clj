@@ -1,6 +1,6 @@
 (ns ^{:doc "Tests for generic Watchers."
       :author "Yannick Scherer"}
-  panoptic.watchers.generic-watcher-test
+  panoptic.runners.generic-runner-test
   (:use midje.sweet
         panoptic.watchers.core
         panoptic.runners.core
@@ -9,7 +9,7 @@
         panoptic.utils.core))
 
 (tabular 
-  (fact "about generic watchers"
+  (fact "about generic runners"
     (let [a (atom 0)
           f (watch-fn (fn [_] @a) #(assoc %1 %2 0) dissoc)
           w (?runner f 10)]
