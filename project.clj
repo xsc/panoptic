@@ -7,8 +7,7 @@
                  [com.taoensso/timbre "1.6.0"]
                  [potemkin "0.2.2"]
                  [pandect "0.2.2"]]
-  :profiles {:dev {:dependencies [[midje "1.5.1"]
-                                  [log4j "1.2.17"]]  
+  :profiles {:dev {:dependencies [[midje "1.5.1"]]
                    :plugins [[lein-midje "3.0.1"]]}
              :examples {:source-paths ["examples"]}}
   :aliases {"run-example" ["with-profile" "dev,examples" "run" "-m"]})
