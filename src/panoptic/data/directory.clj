@@ -65,6 +65,7 @@
 ;; ## Directory Checking
 
 (defn set-directory-created
+  "Set `:created` data in directory map."
   [dir]
   (-> dir
     (dissoc :deleted :missing)
@@ -75,11 +76,12 @@
   "Set `:deleted` data in directory map."
   [dir]
   (-> dir
-    (dissoc :created :missing :created-dirs :deleted-dirs :created-files :deleted-files)
+    (dissoc :created :missing)
     (assoc :deleted true)
     (u/update-timestamp :checked)))
 
 (defn set-directory-missing
+  "Set `:missing` data in directory map."
   [dir]
   (-> dir
     (dissoc :created :deleted :created-dirs :deleted-dirs :created-files :deleted-files)
@@ -87,24 +89,49 @@
     (u/update-timestamp :checked)))
 
 (defn set-directory-untouched
+  "Remove all modification data from directory map."
   [dir]
   (-> dir
     (dissoc :created :deleted :missing)
     (u/update-timestamp :checked)))
 
+(defn- assoc-if-not-empty
+  "Perform assoc in map, if given value is not an empty collection, otherwise dissoc the
+   key."
+  [m k v]
+  (if (empty? v)
+    (dissoc m k) 
+    (assoc m k v)))
+
 (defn set-directory-diff
+  "Create directory map containing difference data between the given old and new state:
+   - `:created-dirs`
+   - `:deleted-dirs`
+   - `:created-files`
+   - `:deleted-files`
+   The new directory map might be `nil` (directory does not exist any more).
+  "
   [old-dir new-dir]
-  (let [old-files (:files old-dir)
-        old-directories (:directories old-dir)
-        new-files (:files new-dir)
-        new-directories (:directories new-dir)
-        created-files (s/difference new-files old-files)
-        created-directories (s/difference new-directories old-directories)
-        deleted-files (s/difference old-files new-files)
-        deleted-directories (s/difference old-directories new-directories)]
-    (-> new-dir
-      (assoc :created-files created-files)
-      (assoc :deleted-files deleted-files)
-      (assoc :created-dirs created-directories)
-      (assoc :deleted-dirs deleted-directories)
-      (u/update-timestamp :checked))))
+  (if-not new-dir
+    (-> old-dir
+      (assoc :directories #{})
+      (assoc :files #{})
+      (dissoc :created-dirs)
+      (assoc-if-not-empty :deleted-dirs (:directories old-dir))
+      (dissoc :created-files)
+      (assoc-if-not-empty :deleted-files (:files old-dir))
+      (u/update-timestamp :checked))
+    (let [old-files (:files old-dir)
+          old-directories (:directories old-dir)
+          new-files (:files new-dir)
+          new-directories (:directories new-dir)
+          created-files (s/difference new-files old-files)
+          created-directories (s/difference new-directories old-directories)
+          deleted-files (s/difference old-files new-files)
+          deleted-directories (s/difference old-directories new-directories)]
+      (-> new-dir
+        (assoc-if-not-empty :created-files created-files)
+        (assoc-if-not-empty :deleted-files deleted-files)
+        (assoc-if-not-empty :created-dirs created-directories)
+        (assoc-if-not-empty :deleted-dirs deleted-directories)
+        (u/update-timestamp :checked)))))

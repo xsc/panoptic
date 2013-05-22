@@ -73,67 +73,53 @@
 ;; - `handle-fn`: a function that takes a watcher, an entity key and the entity and 
 ;;   performs any tasks changes to the entity require
 
+(defn add-entities*
+  [f m es]
+  (let [f (or f #(assoc %1 %2 %2))]
+    (reduce
+      (fn [m e]
+        (or (f m e) m))
+      m es)))
+
+(defn remove-entities*
+  [f m es]
+  (let [f (or f dissoc)]
+    (reduce
+      (fn [m e]
+        (or (f m e) m))
+      m es)))
+
 (defmacro defwatch
   [id & entity-handlers]
-  `(deftype ~id [update-fn# add-fn# remove-fn# handle-fn#]
-     WatchFunction
-     (update-function [this#] update-fn#)
-     (entity-handler [this#] handle-fn#)
-     (add-entities [this# m# es#]
-       (let [f# (or add-fn# #(assoc %1 %2 %2))]
-         (reduce
-           (fn [m# e#]
-             (or (f# m# e#) m#)) 
-           m# es#)))
-     (remove-entities [this# m# es#]
-       (let [f# (or remove-fn# dissoc)]
-         (reduce
-           (fn [m# e#]
-             (or (f# m# e#) m#)) 
-           m# es#)))
-     (wrap-entity-handler [this# f#]
-       (when-not (fn? f#)
-         (throw (Exception. "expects a function as second parameter.")))
-       (new ~id update-fn# add-fn# remove-fn# (f# handle-fn#)))
-     (wrap-watch-fn [this# f#]
-       (when-not (fn? f#)
-         (throw (Exception. "expects a function as second parameter.")))
-       (new ~id (f# update-fn#) add-fn# remove-fn# handle-fn#))
-     
-     ~@entity-handlers))
+  (let [T (gensym "T")]
+    `(do 
+       (deftype ~T [update-fn# add-fn# remove-fn# handle-fn#]
+         WatchFunction
+         (update-function [this#] update-fn#)
+         (entity-handler [this#] handle-fn#)
+         (add-entities [this# m# es#] (add-entities* add-fn# m# es#))
+         (remove-entities [this# m# es#] (remove-entities* remove-fn# m# es#))
+         (wrap-entity-handler [this# f#]
+           (when-not (fn? f#)
+             (throw (Exception. "expects a function as second parameter.")))
+           (new ~T update-fn# add-fn# remove-fn# (f# handle-fn#)))
+         (wrap-watch-fn [this# f#]
+           (when-not (fn? f#)
+             (throw (Exception. "expects a function as second parameter.")))
+           (new ~T (f# update-fn#) add-fn# remove-fn# handle-fn#))
+         ~@entity-handlers)
+       (defn ~id
+         ([u#] (~id u# nil nil))
+         ([u# a# r#] (new ~T u# (or a# #(assoc %1 %2 %2)) (or r# dissoc) nil))))))
 
-;; ## Generic WatchFn
+;; ## Generic Watching Logic
 
-(defwatch WatchFn)
+(defwatch watch-fn)
 
-(defn watch-fn
-  "Create new WatchFn."
-  ([update-fn] (watch-fn update-fn nil nil))
-  ([update-fn add-fn remove-fn] 
-   (WatchFn. update-fn (or add-fn #(assoc %1 %2 %2)) (or remove-fn dissoc) (constantly nil))))
-
-;; ## Watcher Protocol
-
-(defprotocol Watcher
-  "Protocol for Watchers. Watchers should also implement clojure.lang.IDeref"
-  (watch-entities! [this es]
-    "Add Entities to Watch List.")
-  (unwatch-entities! [this es]
-    "Remove Entities from Watch List.")
-  (watched-entities [this]
-    "Get current entity map.")
-  (start-watcher! [this]
-    "Start Watcher Loop.")
-  (stop-watcher! [this]
-    "Stop Watcher Loop. Returns a future that can be used to wait for
-     shutdown completion."))
-
-(defn watch-entity!
-  "Add single Entity to Watch List."
-  [w e]
-  (watch-entities! w [e]))
-
-(defn unwatch-entity!
-  "Remove single Entity from Watch List."
-  [w e]
-  (unwatch-entities! w [e]))
+(defn on-flag-set
+  "Run function if an entity map's field is set to true."
+  [watch-fn flag f]
+  (after-entity-handler
+    watch-fn
+    #(when (get %3 flag)
+       (f %1 %2 %3))))

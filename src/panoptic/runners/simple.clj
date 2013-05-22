@@ -1,45 +1,15 @@
-(ns ^{:doc "Simple, single-threaded Watchers."
+(ns ^{:doc "Simple, single-threaded Watch Runners."
       :author "Yannick Scherer"}
-  panoptic.watchers.simple-watchers
+  panoptic.runners.simple
   (:use [clojure.tools.logging :only [debug info warn error]]
-        panoptic.watchers.core)
+        panoptic.watchers.core
+        panoptic.runners.core)
   (:require [panoptic.utils.core :as u])) 
-
-;; ## Watcher Loop
-
-(defn- run-entity-watcher!
-  "Run the given watcher function over the given entity map, using the given handler
-   function."
-  [w watch-fn entities]
-  (try 
-    (->> entities
-      (keep 
-        (fn [[k x]]
-          (when x
-            (when-let [f (update-entity! watch-fn w k x)]
-              [k f]))))
-      (into {}))
-    (catch Exception ex
-      (error ex "in `run-entity-watcher!'"))))
-
-(defn- run-watcher!
-  "Run Watcher Loop"
-  [w watch-fn interval entities]
-  (let [stop? (atom false)
-        watch-future (future
-                       (loop []
-                         (when-not @stop?
-                           (when-let [es (swap! entities #(run-entity-watcher! w watch-fn %))] 
-                             (doseq [[k x] es]
-                               (run-entity-handler! watch-fn w k x)) 
-                             (u/sleep interval) 
-                             (recur)))))]
-    (vector watch-future #(reset! stop? true)))) 
 
 ;; ## Watcher Type
 
 (deftype SimpleWatcher [watch-fn interval entities thread-data]
-  Watcher
+  WatchRunner
   (watch-entities! [this es]
     (swap! entities #(add-entities watch-fn % es))
     this)
@@ -49,7 +19,7 @@
   (watched-entities [this]
     @entities)
   (start-watcher! [this]
-    (swap! thread-data #(or % (run-watcher! this watch-fn interval entities)))
+    (swap! thread-data #(or % (run-watcher-thread! this watch-fn interval entities)))
     this)
   (stop-watcher! [this]
     (when-let [[ft f] @thread-data]

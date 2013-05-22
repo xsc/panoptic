@@ -1,13 +1,13 @@
-(ns ^{:doc "Multi-Threaded Watchers."
+(ns ^{:doc "Multi-Threaded Watch Runners"
       :author "Yannick Scherer"}
-  panoptic.watchers.multi-threaded-watchers
+  panoptic.runners.multi-threaded
   (:use [clojure.tools.logging :only [debug info warn error]]
-        panoptic.watchers.core)
+        panoptic.runners.core)
   (:require [panoptic.utils.core :as u]
-            [panoptic.watchers.simple-watchers :as sw])) 
+            [panoptic.runners.simple :as sw])) 
 
 (deftype MultiWatcher [watch-fn n interval]
-  Watcher
+  WatchRunner
   (watch-entities! [this es]
     ;; TODO 
     )
