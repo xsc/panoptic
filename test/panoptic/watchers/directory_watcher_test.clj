@@ -4,6 +4,7 @@
   (:require [panoptic.utils.fs :as fs]
             [clojure.set :as set :only [difference]])
   (:use midje.sweet
+        panoptic.data.core
         panoptic.watchers.core
         panoptic.watchers.file-watcher
         panoptic.watchers.directory-watcher))
@@ -17,7 +18,7 @@
       (let [r (add-entities dw {} ["some-file"])]
         (count r) => 1
         (:path (get r p)) => p
-        (:missing (get r p)) => true
+        (get r p) => missing?
         (:opts (get r p)) => (contains [:refresh fn?]))
       (remove-entities dw {p {:path p}} ["some-file"]) => {}))
 
@@ -28,14 +29,18 @@
       (tabular
         (fact "about directory-watcher's updating logic (child entities)"
           (reset! refreshment 
-                  {:directories (set ?new-directories) 
-                   :files (set ?new-files)})
-          (let [u (update-entity! dw nil "x" {:path "x" :directories (set ?old-directories) :files (set ?old-files)})]
+                  (-> {}
+                    (add-children :files ?new-files)
+                    (add-children :directories ?new-directories)))
+          (let [u (update-entity! dw nil "x" (-> {:path "x"}
+                                               (add-children :files ?old-files)
+                                               (add-children :directories ?old-directories)))
+                diff (children-diff u)]
             (:path u) => "x"
-            (set (:created-dirs u))  => (set/difference (set ?new-directories) (set ?old-directories))
-            (set (:deleted-dirs u))  => (set/difference (set ?old-directories) (set ?new-directories))
-            (set (:created-files u)) => (set/difference (set ?new-files) (set ?old-files))
-            (set (:deleted-files u)) => (set/difference (set ?old-files) (set ?new-files))))
+            (get-in diff [:directories :created])  => (set/difference (set ?new-directories) (set ?old-directories))
+            (get-in diff [:directories :deleted])  => (set/difference (set ?old-directories) (set ?new-directories))
+            (get-in diff [:files :created]) => (set/difference (set ?new-files) (set ?old-files))
+            (get-in diff [:files :deleted]) => (set/difference (set ?old-files) (set ?new-files))))
         ?old-directories ?old-files ?new-directories ?new-files
         nil              nil        nil              nil
         ?x               nil        nil              nil
@@ -58,21 +63,21 @@
   (tabular
     (fact "about directory-watcher's updating logic (root entities)"
       (reset! refreshment (when ?exists {}))
-      (let [u (update-entity! dw nil "x" {:path "x" ?k true})]
+      (let [u (update-entity! dw nil "x" (-> {:path "x"} ?k))]
         (:path u) => "x"
-        (:missing u) => ?missing
-        (:created u) => ?created
-        (:deleted u) => ?deleted))
-    ?k         ?exists     ?missing ?created ?deleted
-    nil        false       falsey   falsey    truthy
-    :created   false       falsey   falsey    truthy
-    :deleted   false       truthy   falsey    falsey
-    :missing   false       truthy   falsey    falsey
+        (missing? u) => ?missing
+        (created? u) => ?created
+        (deleted? u) => ?deleted))
+    ?k            ?exists     ?missing ?created ?deleted
+    identity      false       falsey   falsey    truthy
+    set-created   false       falsey   falsey    truthy
+    set-deleted   false       truthy   falsey    falsey
+    set-missing   false       truthy   falsey    falsey
 
-    nil        true        falsey   falsey    falsey
-    :created   true        falsey   falsey    falsey
-    :missing   true        falsey   truthy    falsey
-    :deleted   true        falsey   truthy    falsey)
+    identity      true        falsey   falsey    falsey
+    set-created   true        falsey   falsey    falsey
+    set-deleted   true        falsey   truthy    falsey
+    set-missing   true        falsey   truthy    falsey)
   
   (let [a (atom [])
         dw (-> dw
@@ -85,9 +90,12 @@
         (fact "about directory-watcher's handler logic"
           (reset! a [])
           (reset! refreshment 
-                  {:directories (set ?new-directories) 
-                   :files (set ?new-files)})
-          (let [u (update-entity! dw nil "x" {:path "x" :directories (set ?old-directories) :files (set ?old-files)})] 
+                  (-> {}
+                    (add-children :files ?new-files)
+                    (add-children :directories ?new-directories)))
+          (let [u (update-entity! dw nil "x" (-> {:path "x"}
+                                               (add-children :files ?old-files)
+                                               (add-children :directories ?old-directories)))]
             (run-entity-handler! dw nil "x" u) => anything
             (:path u) => "x"
             (set @a) => #(every? (partial contains? %) ?a)))

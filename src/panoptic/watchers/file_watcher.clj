@@ -2,8 +2,9 @@
       :author "Yannick Scherer"}
   panoptic.watchers.file-watcher
   (:use panoptic.watchers.core
-        [taoensso.timbre :only [error]])
+        [taoensso.timbre :only [error info]])
   (:require [panoptic.data.file :as f]
+            [panoptic.data.core :as data]
             [panoptic.utils.fs :as fs :only [file-exists? last-modified]]
             [pandect.core :as cs]))
 
@@ -45,28 +46,30 @@
 (defn- update-file!
   "Check a file (given as a file map) for changes using the given checker. Returns
    an updated file map."
-  [checker {:keys [checked path checksum] :as f}]
+  [checker {:keys [path] :as f}]
   (try
-    (let [chk (checker path)]
-      (condp = [checksum chk]
-        [nil nil] (f/set-file-missing f)
-        [chk chk] (f/set-file-untouched f chk)
-        [nil chk] (if (or (:deleted f) (:missing f)) ;; this prevents creation notifications on startup
-                    (f/set-file-created f chk) 
-                    (f/set-file-untouched f chk)) 
-        [checksum nil] (f/set-file-deleted f)
-        (f/set-file-modified f chk)))
+    (let [chk0 (data/checksum f)
+          chk1 (checker path)]
+      (condp = [chk0 chk1]
+        [nil  nil]  (data/set-missing f)
+        [chk0 chk0] (data/set-untouched f)
+        [nil  chk1] (let [f-new (data/set-created f chk1)]
+                      (if (not (data/exists? f)) 
+                        f-new
+                        (data/set-untouched f-new)))
+        [chk0 nil]  (data/set-deleted f)
+        (data/set-modified f chk1)))
     (catch Exception ex
       (error ex "in file checker for file" path)
-      (f/set-file-untouched f checksum))))
+      (data/set-untouched f))))
 
 ;; ## File Watcher
 
 (defwatch file-watcher*
   FileEntityHandlers
-  (on-file-create [this f] (on-flag-set this :created f))
-  (on-file-modify [this f] (on-flag-set this :modified f))
-  (on-file-delete [this f] (on-flag-set this :deleted f)))
+  (on-file-create [this f] (on-entity-create this f))
+  (on-file-modify [this f] (on-entity-modify this f))
+  (on-file-delete [this f] (on-entity-delete this f)))
 
 (defn file-watcher
   "Create WatchFn for Files."

@@ -2,7 +2,8 @@
       :author "Yannick Scherer"}
   panoptic.watchers.core
   (:use [taoensso.timbre :only [debug info warn error]])
-  (:require [panoptic.utils.core :as u]))
+  (:require [panoptic.utils.core :as u]
+            [panoptic.data.core :as data]))
 
 ;; ## Protocol for WatchFn
 
@@ -99,27 +100,57 @@
          (entity-handler [this#] handle-fn#)
          (add-entities [this# m# es#] (add-entities* add-fn# m# es#))
          (remove-entities [this# m# es#] (remove-entities* remove-fn# m# es#))
-         (wrap-entity-handler [this# f#]
-           (when-not (fn? f#)
-             (throw (Exception. "expects a function as second parameter.")))
-           (new ~T update-fn# add-fn# remove-fn# (f# handle-fn#)))
-         (wrap-watch-fn [this# f#]
-           (when-not (fn? f#)
-             (throw (Exception. "expects a function as second parameter.")))
-           (new ~T (f# update-fn#) add-fn# remove-fn# handle-fn#))
+         (wrap-entity-handler [this# f#] (new ~T update-fn# add-fn# remove-fn# (f# handle-fn#)))
+         (wrap-watch-fn [this# f#] (new ~T (f# update-fn#) add-fn# remove-fn# handle-fn#))
          ~@entity-handlers)
        (defn ~id
          ([u#] (~id u# nil nil))
          ([u# a# r#] (new ~T u# (or a# #(assoc %1 %2 %2)) (or r# dissoc) nil))))))
 
-;; ## Generic Watching Logic
-
 (defwatch watch-fn)
 
-(defn on-flag-set
-  "Run function if an entity map's field is set to true."
-  [watch-fn flag f]
+;; ## Generic Handlers
+
+(defn on-entity-matches
+  "Handler that runs if an entity matches the given predicate."
+  [watch-fn p? f]
+  (after-entity-handler 
+    watch-fn
+    #(when (p? %3)
+       (f %1 %2 %3))))
+
+(def on-entity-create 
+  "Handler that runs if an entity has the created-flag set."
+  #(on-entity-matches %1 data/created? %2))
+
+(def on-entity-modify
+  "Handler that runs if an entity has the modified-flag set."
+  #(on-entity-matches %1 data/modified? %2))
+
+(def on-entity-delete 
+  "Handler that runs if an entity has the deleted-flag set."
+  #(on-entity-matches %1 data/deleted? %2))
+
+(defn on-child-create
+  "Handler that runs if a given entity contains a children diff map
+   which in turn contains a field `:created` under the given key. "
+  [watch-fn child-key f]
   (after-entity-handler
     watch-fn
-    #(when (get %3 flag)
-       (f %1 %2 %3))))
+    (fn [w k entity]
+      (when-let [diff (data/children-diff entity)]
+        (when-let [created (get-in diff [child-key :created])]
+          (doseq [e created]
+            (f w entity e)))))))
+
+(defn on-child-delete
+  "Handler that runs if a given entity contains a children diff map
+   which in turn contains a field `:deleted` under the given key. "
+  [watch-fn child-key f]
+  (after-entity-handler
+    watch-fn
+    (fn [w k entity]
+      (when-let [diff (data/children-diff entity)]
+        (when-let [deleted (get-in diff [child-key :deleted])]
+          (doseq [e deleted]
+            (f w entity e)))))))

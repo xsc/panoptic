@@ -5,6 +5,7 @@
         panoptic.watchers.file-watcher)
   (:require [clojure.set :as s :only [difference]]
             [panoptic.runners.core :as r]
+            [panoptic.data.core :as data]
             [panoptic.data.file :as fs]
             [panoptic.data.directory :as f]
             [panoptic.utils.core :as u]))
@@ -19,39 +20,31 @@
 
 ;; ## Logic
 
-(defn- on-directory-change
-  [watch-fn set-key create-fn f]
-  (after-entity-handler 
-    watch-fn 
-    #(when-let [s (get %3 set-key)] 
-       (doseq [e s]
-         (f %1 %3 (create-fn (str (:path %3) "/" e)))))))
-
 (defn- update-directory!
   "Check the given directory for new files/subdirectories, returning `nil` if it was deleted."
-  [refresh-fn {:keys [missing deleted] :as d0}]
-  (let [missing? (or missing deleted)
+  [refresh-fn d0]
+  (let [missing? (not (data/exists? d0))
         d (refresh-fn d0)]
-    (cond (not (or missing? d))  (-> d0 (f/set-directory-diff d) (f/set-directory-deleted)) 
-          (and missing? (not d)) (f/set-directory-missing d0)
-          (and missing? d)       (-> d0 (f/set-directory-diff d) (f/set-directory-created)) 
-          :else (-> d0 (f/set-directory-diff d) (f/set-directory-untouched)))))
+    (cond (not (or missing? d))  (-> d0 (data/set-children-diff d) (data/set-deleted)) 
+          (and missing? (not d)) (data/set-missing d0)
+          (and missing? d)       (-> d0 (data/set-children-diff d) (data/set-created)) 
+          :else (-> d0 (data/set-children-diff d) (data/set-untouched)))))
 
 ;; ## Recursive Directory Watcher
 
 (defwatch recursive-directory-watcher*
   DirectoryEntityHandlers
   (on-directory-create [this f]
-    (on-flag-set this :created f))
+    (on-entity-create this f))
   (on-directory-delete [this f]
-    (on-flag-set this :deleted f))
+    (on-entity-delete this f))
   
   FileEntityHandlers
   (on-file-create [this f]
-    (on-directory-change this :created-files fs/file f))
+    (on-child-create this :files #(f %1 %2 (fs/file (str (:path %2) "/" %3)))))
   (on-file-delete [this f]
-    (on-directory-change this :deleted-files fs/file f))
-  (on-file-modify [this f] nil))
+    (on-child-delete this :files #(f %1 %2 (fs/file (str (:path %2) "/" %3)))))
+  (on-file-modify [this f] this))
 
 (defn- recursive-directory-watcher
   [refresh-fn opts]
@@ -61,13 +54,13 @@
       (fn [m f]
         (let [[path created?] (if (string? f) [f nil] [(first f) true])]
           (when-let [ds (apply f/directories path opts)] 
-            (let [ds (if created? (map f/set-directory-missing ds) ds)] 
+            (let [ds (if created? (map data/set-missing ds) ds)] 
               (reduce #(assoc %1 (:path %2) %2) m ds)))))
       (fn [m path]
         (when-let [d (apply f/directory path opts)]
           (dissoc m (:path d)))))
-    (on-directory-change :created-dirs identity #(r/watch-entity! %1 [%3])) 
-    (on-directory-change :deleted-dirs identity #(r/unwatch-entity! %1 %3))))
+    (on-child-create :directories #(r/watch-entity! %1 [%3])) 
+    (on-child-delete :directories #(r/unwatch-entity! %1 %3))))
 
 ;; ## Normal Directory Watcher
 
@@ -75,19 +68,19 @@
   DirectoryEntityHandlers
   (on-directory-create [this f]
     (-> this
-      (on-flag-set :created f)
-      (on-directory-change :created-dirs f/directory f)))
+      (on-entity-create f) 
+      (on-child-create :directories #(f %1 %2 (f/directory (str (:path %2) "/" %3))))))
   (on-directory-delete [this f]
     (-> this
-      (on-directory-change :deleted-dirs f/directory f) 
-      (on-flag-set :deleted f)))
+      (on-entity-delete f) 
+      (on-child-delete :directories #(f %1 %2 (f/directory (str (:path %2) "/" %3))))))
   
   FileEntityHandlers
   (on-file-create [this f]
-    (on-directory-change this :created-files fs/file f))
+    (on-child-create this :files #(f %1 %2 (fs/file (str (:path %2) "/" %3)))))
   (on-file-delete [this f]
-    (on-directory-change this :deleted-files fs/file f))
-  (on-file-modify [this f] nil))
+    (on-child-delete this :files #(f %1 %2 (fs/file (str (:path %2) "/" %3)))))
+  (on-file-modify [this f] this))
 
 (defn- normal-directory-watcher
   [refresh-fn opts]

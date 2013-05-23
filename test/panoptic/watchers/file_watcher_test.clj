@@ -3,6 +3,7 @@
   panoptic.watchers.file-watcher-test
   (:require [panoptic.utils.fs :as fs])
   (:use midje.sweet
+        panoptic.data.core
         panoptic.watchers.core
         panoptic.watchers.file-watcher))
 
@@ -23,19 +24,20 @@
   (tabular 
     (fact "about file-watcher's updating logic"
       (reset! cs ?new-cs)
-      (let [u (update-entity! fw nil "x" {:path "x" :checksum ?initial-cs :missing ?missing})]
+      (let [u (update-entity! fw nil "x" (-> {:path "x"}
+                                           (set-checksum ?initial-cs)
+                                           ((fn [m] (if ?missing (set-missing m) m)))))]
         (:path u) => "x"
-        (:checked u) => pos?
-        (:checksum u) => ?new-cs
-        (map #(get u %) ?flags-set) => #(every? truthy %)
-        (map #(get u %) ?flags-unset) => #(every? falsey %)))
-    ?initial-cs      ?new-cs     ?missing   ?flags-set       ?flags-unset
-    nil              nil         nil        [:missing]      [:created :deleted :modified] 
-    nil              "abc"       nil        []              [:created :deleted :modified :missing] 
-    nil              "abc"       true       [:created]      [:missing :deleted :modified] 
-    "abc"            nil         nil        [:deleted]      [:created :missing :modified] 
-    "abc"            "def"       nil        [:modified]     [:created :missing :deleted] 
-    "abc"            "abc"       nil        []              [:created :missing :deleted :deleted]) 
+        (checksum u) => ?new-cs
+        (map #(% u) ?flags-set) => #(every? truthy %)
+        (map #(% u) ?flags-unset) => #(every? falsey %)))
+    ?initial-cs      ?new-cs     ?missing   ?flags-set      ?flags-unset
+    nil              nil         nil        [missing?]      [created? deleted? modified?] 
+    nil              "abc"       nil        []              [created? deleted? modified? missing?] 
+    nil              "abc"       true       [created?]      [missing? deleted? modified?] 
+    "abc"            nil         nil        [deleted?]      [created? missing? modified?] 
+    "abc"            "def"       nil        [modified?]     [created? missing? deleted?] 
+    "abc"            "abc"       nil        []              [created? missing? deleted? modified?]) 
 
   (tabular
     (fact "about file-watcher's handler logic"
@@ -45,7 +47,9 @@
                  (on-file-modify (fn [& _] (reset! a :modify)))
                  (on-file-delete (fn [& _] (reset! a :delete))))]
         (reset! cs ?new-cs)
-        (let [u (update-entity! fw nil "x" {:path "x" :checksum ?initial-cs :missing ?missing})]
+        (let [u (update-entity! fw nil "x" (-> {:path "x"}
+                                             (set-checksum ?initial-cs)
+                                             ((fn [m] (if ?missing (set-missing m) m)))))]
           (run-entity-handler! fw nil "x" u) => anything
           @a => ?a)))
     ?initial-cs      ?new-cs     ?missing   ?a

@@ -2,16 +2,6 @@
       :author "Yannick Scherer"}
   panoptic.utils.core)
 
-(defn unix-timestamp
-  "Get Unix Timestamp in Milliseconds"
-  []
-  (System/currentTimeMillis))
-
-(defn update-timestamp
-  "Update k timestamp in map."
-  [f k] 
-  (assoc f k (unix-timestamp)))
-
 (defn match?
   "Check if the given String matches the given Pattern."
   [p s]
