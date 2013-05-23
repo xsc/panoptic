@@ -45,16 +45,15 @@
 (deftype MultiWatcher [id watch-fn thread-count interval thread-data entities]
   WatchRunner
   (watch-entities! [this es]
-    (future
-      (dosync
-        (let [new-entities (let [m (reduce #(merge %1 (deref %2)) {} entities)]
-                             (add-entities watch-fn m es))
-              c (inc (int (/ (count new-entities) thread-count))) 
-              groups (->> new-entities
-                       (partition c c nil)
-                       (map #(into {} %)))]
-          (doseq [[e g] (map vector entities (concat groups (repeat {})))]
-            (ref-set e g))))) 
+    (dosync
+      (let [new-entities (let [m (reduce #(merge %1 (deref %2)) {} entities)]
+                           (add-entities watch-fn m es))
+            c (inc (int (/ (count new-entities) thread-count))) 
+            groups (->> new-entities
+                     (partition c c nil)
+                     (map #(into {} %)))]
+        (doseq [[e g] (map vector entities (concat groups (repeat {})))]
+          (ref-set e g))))
     this)
   (unwatch-entities! [this es]
     (future
