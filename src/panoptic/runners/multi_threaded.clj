@@ -40,33 +40,29 @@
                   stop-future)]
     [stop-future stop-fn]))
 
+(defn- update-entity-refs!
+  [watch-fn thread-count update-fn entities es]
+  (dosync
+    (let [new-entities (let [m (reduce #(merge %1 (deref %2)) {} entities)]
+                         (update-fn watch-fn m es))
+          c (inc (int (/ (count new-entities) thread-count))) 
+          groups (->> new-entities
+                   (partition c c nil)
+                   (map #(into {} %)))]
+      (doseq [[e g] (map vector entities (concat groups (repeat {})))]
+        (ref-set e g))))) 
+
 ;; ## MultiWatcher
 
 (deftype MultiWatcher [id watch-fn thread-count interval thread-data entities]
   WatchRunner
   (watch-entities! [this es]
-    (dosync
-      (let [new-entities (let [m (reduce #(merge %1 (deref %2)) {} entities)]
-                           (add-entities watch-fn m es))
-            c (inc (int (/ (count new-entities) thread-count))) 
-            groups (->> new-entities
-                     (partition c c nil)
-                     (map #(into {} %)))]
-        (doseq [[e g] (map vector entities (concat groups (repeat {})))]
-          (ref-set e g))))
+    (update-entity-refs! watch-fn thread-count add-entities entities es)
     this)
   (unwatch-entities! [this es]
     (future
       (u/sleep interval) ;; all entities should be processed at least once more (TODO: seems like a hack)
-      (dosync
-        (let [new-entities (let [m (reduce #(merge %1 (deref %2)) {} entities)]
-                             (remove-entities watch-fn m es))
-              c (inc (int (/ (count new-entities) thread-count))) 
-              groups (->> new-entities
-                       (partition c c nil)
-                       (map #(into {} %)))]
-          (doseq [[e g] (map vector entities (concat groups (repeat {})))]
-            (ref-set e g))))) 
+      (update-entity-refs! watch-fn thread-count remove-entities entities es)) 
     this)
   (watched-entities [this]
     (reduce #(merge %1 (deref %2)) {} entities))
