@@ -39,8 +39,7 @@
                           (loop []
                             (when-not @stop?
                               (debug tag "Running Entity Updaters ...")
-                              (dosync (alter entities #(run-entity-watcher! tag w watch-fn %))) 
-                              (when-let [es (seq @entities)]
+                              (when-let [es (dosync (alter entities #(run-entity-watcher! tag w watch-fn %)))]
                                 (debug tag "Running Entity Handlers ...")   
                                 (doseq [[k x] es]
                                   (trace tag "* Running Entity Handler on:" k)

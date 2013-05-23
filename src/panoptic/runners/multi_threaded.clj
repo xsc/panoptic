@@ -45,25 +45,36 @@
 (deftype MultiWatcher [id watch-fn thread-count interval thread-data entities]
   WatchRunner
   (watch-entities! [this es]
-    (dosync
-      (let [ens @entities
-            groups (partition thread-count thread-count nil es)] 
-        (doseq [[e g] (map vector ens groups)]
-          (alter e #(add-entities watch-fn % g)))
-        (alter entities #(sort-by (comp count deref) %))))
+    (future
+      (dosync
+        (let [new-entities (let [m (reduce #(merge %1 (deref %2)) {} entities)]
+                             (add-entities watch-fn m es))
+              c (inc (int (/ (count new-entities) thread-count))) 
+              groups (->> new-entities
+                       (partition c c nil)
+                       (map #(into {} %)))]
+          (doseq [[e g] (map vector entities (concat groups (repeat {})))]
+            (ref-set e g))))) 
     this)
   (unwatch-entities! [this es]
-    (dosync
-      (doseq [e @entities]
-        (alter e #(remove-entities watch-fn % es)))
-      (alter entities #(sort-by (comp count deref) %)))
+    (future
+      (u/sleep interval) ;; all entities should be processed at least once more (TODO: seems like a hack)
+      (dosync
+        (let [new-entities (let [m (reduce #(merge %1 (deref %2)) {} entities)]
+                             (remove-entities watch-fn m es))
+              c (inc (int (/ (count new-entities) thread-count))) 
+              groups (->> new-entities
+                       (partition c c nil)
+                       (map #(into {} %)))]
+          (doseq [[e g] (map vector entities (concat groups (repeat {})))]
+            (ref-set e g))))) 
     this)
   (watched-entities [this]
-    (reduce #(merge %1 (deref %2)) {} (take thread-count @entities)))
+    (reduce #(merge %1 (deref %2)) {} entities))
   (start-watcher! [this]
     (dosync
       (when-not @thread-data
-        (ref-set thread-data (run-multi-watcher! id this watch-fn interval @entities))))
+        (ref-set thread-data (run-multi-watcher! id this watch-fn interval entities))))
     this)
   (stop-watcher! [this]
     (dosync
@@ -98,7 +109,7 @@
       thread-count
       (or interval 1000) 
       (ref nil)
-      (ref (take thread-count (repeatedly #(ref {})))))))
+      (doall (take thread-count (repeatedly #(ref {})))))))
 
 ;; ## Start MultiWatcher
 

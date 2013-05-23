@@ -64,8 +64,8 @@
             (let [ds (if created? (map f/set-directory-missing ds) ds)] 
               (reduce #(assoc %1 (:path %2) %2) m ds)))))
       (fn [m path]
-        (when-let [ds (apply f/directories path opts)]
-          (reduce #(dissoc %1 (:path %2)) m ds))))
+        (when-let [d (apply f/directory path opts)]
+          (dissoc m (:path d)))))
     (on-directory-change :created-dirs identity #(r/watch-entity! %1 [%3])) 
     (on-directory-change :deleted-dirs identity #(r/unwatch-entity! %1 %3))))
 
