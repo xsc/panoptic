@@ -74,12 +74,8 @@
 (defn file-watcher
   "Create WatchFn for Files."
   [& {:keys [checksum]}] 
-  (let [checker (checksum-fn checksum)]
+  (let [checker (or (checksum-fn checksum) cs/crc32)]
     (file-watcher*
-      (partial update-file! (or checker cs/crc32-file))
-      (fn [m path]
-        (when-let [f (f/file path)]
-          (assoc m (:path f) f)))
-      (fn [m path]
-        (when-let [f (f/file path)]
-          (dissoc m (:path f)))))))
+      #(update-file! checker %)
+      #(vector (fs/absolute-path %))
+      (fn [p _] (f/file p)))))

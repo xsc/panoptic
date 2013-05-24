@@ -11,15 +11,15 @@
 
 ;; ## Generic Data
 
-(defn unix-timestamp
-  "Get Unix Timestamp in Milliseconds"
-  []
-  (System/currentTimeMillis))
-
 (defn update-timestamp!
   "Update timestamp in map."
   [m] 
-  (assoc m ::timestamp (unix-timestamp)))
+  (assoc m ::timestamp (u/unix-timestamp)))
+
+(defn timestamp
+  "Get timestamp from Map."
+  [m]
+  (::timestamp m))
 
 (defn set-checksum
   "Set Checksum in Entity Map."
@@ -40,8 +40,18 @@
 
 ;; ## Change Types
 
+(defn set-changed
+  "Set changed flag."
+  [m]
+  (assoc m ::changed true))
+
+(defn clear-changed
+  "Clear changed Flag."
+  [m]
+  (dissoc m ::changed))
+
 (defmacro ^:private def-change
-  [id]
+  [id is-change?]
   (let [k (keyword id)
         get-fn (symbol (str id "?"))
         set-fn (symbol (str "set-" id))]
@@ -52,21 +62,25 @@
        (defn ~set-fn
          ([m#] (~set-fn m# nil))
          ([m# cs#]
-          (let [m# (assoc m# ::state ~k)]
-            (if cs#
-              (set-checksum m# cs#)
-              (clear-checksum m#))))))))
+          (let [m# (assoc m# ::state ~k)
+                m# (if cs#
+                     (set-checksum m# cs#)
+                     (clear-checksum m#))]
+            (if ~is-change?
+              (set-changed m#)
+              (clear-changed m#))))))))
 
-(def-change created)
-(def-change modified)
-(def-change deleted)
-(def-change missing)
+(def-change created  true)
+(def-change modified true)
+(def-change deleted  true)
+(def-change missing  false)
 
 (defn set-untouched
   "Clear state in given Entity Map."
   [m]
   (-> m
     (dissoc m ::state)
+    (clear-changed)
     (update-timestamp!)))
 
 (defn untouched?
@@ -75,6 +89,7 @@
   (boolean (not (get m ::state))))
 
 (defn exists?
+  "Check if the entity's state is neither `:deleted` nor `:missing`."
   [m]
   (not (or (missing? m) (deleted? m))))
 
@@ -119,3 +134,15 @@
   "Remove diff map from entity."
   [m]
   (update-in m [::children] dissoc ::diff))
+
+;; ## The Ultimate Check
+
+(defn changed?
+  "Check if an entity has changed (either the `::changed` flag is set or
+   there are created/deleted child entities)."
+  [m]
+  (boolean
+    (let [diff (vals (children-diff m))] 
+      (or (::changed m)
+          (some (complement empty?) (map :created diff))
+          (some (complement empty?) (map :deleted diff))))))

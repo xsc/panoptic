@@ -17,11 +17,13 @@
     (dosync (alter entities #(remove-entities watch-fn % es))) 
     this)
   (watched-entities [this]
-    @entities)
+    (->> @entities
+      (map (fn [[k v]] [k @v]))
+      (into {})))
   (start-watcher! [this]
     (dosync
       (when-not @thread-data
-        (ref-set thread-data (run-watcher-thread! id this watch-fn interval entities))))
+        (ref-set thread-data (run-standalone-watcher! id this watch-fn nil interval entities))))
     this)
   (stop-watcher! [this]
     (dosync

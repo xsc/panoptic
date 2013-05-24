@@ -10,15 +10,6 @@
 ;; ## Import
 
 (import-vars
-  [panoptic.runners.core
-   
-   watch-entities!
-   watch-entity!
-   unwatch-entity!
-   unwatch-entities!
-   start-watcher!
-   stop-watcher!]
-
   [panoptic.runners.simple
    
    simple-watcher
@@ -31,6 +22,12 @@
 
   [panoptic.watchers.core
    
+   watch-entities!
+   watch-entity!
+   unwatch-entity!
+   unwatch-entities!
+   start-watcher!
+   stop-watcher! 
    wrap-entity-handler
    after-entity-handler
    before-entity-handler

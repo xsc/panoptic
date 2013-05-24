@@ -4,10 +4,10 @@
   (:use panoptic.watchers.core
         panoptic.watchers.file-watcher)
   (:require [clojure.set :as s :only [difference]]
-            [panoptic.runners.core :as r]
             [panoptic.data.core :as data]
-            [panoptic.data.file :as fs]
-            [panoptic.data.directory :as f]
+            [panoptic.data.file :as f]
+            [panoptic.data.directory :as d]
+            [panoptic.utils.fs :as fs]
             [panoptic.utils.core :as u]))
 
 ;; ## Protocol
@@ -41,9 +41,9 @@
   
   FileEntityHandlers
   (on-file-create [this f]
-    (on-child-create this :files #(f %1 %2 (fs/file (str (:path %2) "/" %3)))))
+    (on-child-create this :files #(f %1 %2 (f/file (str (:path %2) "/" %3)))))
   (on-file-delete [this f]
-    (on-child-delete this :files #(f %1 %2 (fs/file (str (:path %2) "/" %3)))))
+    (on-child-delete this :files #(f %1 %2 (f/file (str (:path %2) "/" %3)))))
   (on-file-modify [this f] this))
 
 (defn- recursive-directory-watcher
@@ -51,16 +51,10 @@
   (->
     (recursive-directory-watcher*
       (partial update-directory! refresh-fn) 
-      (fn [m f]
-        (let [[path created?] (if (string? f) [f nil] [(first f) true])]
-          (when-let [ds (apply f/directories path opts)] 
-            (let [ds (if created? (map data/set-missing ds) ds)] 
-              (reduce #(assoc %1 (:path %2) %2) m ds)))))
-      (fn [m path]
-        (when-let [d (apply f/directory path opts)]
-          (dissoc m (:path d)))))
-    (on-child-create :directories #(r/watch-entity! %1 [%3])) 
-    (on-child-delete :directories #(r/unwatch-entity! %1 %3))))
+      (fn [k] (vector (fs/absolute-path k)))
+      (fn [p _] (apply d/directory p opts)))
+    (on-child-create :directories #(watch-entity! %1 [%3])) 
+    (on-child-delete :directories #(unwatch-entity! %1 %3))))
 
 ;; ## Normal Directory Watcher
 
@@ -69,29 +63,25 @@
   (on-directory-create [this f]
     (-> this
       (on-entity-create f) 
-      (on-child-create :directories #(f %1 %2 (f/directory (str (:path %2) "/" %3))))))
+      (on-child-create :directories #(f %1 %2 (d/directory (str (:path %2) "/" %3))))))
   (on-directory-delete [this f]
     (-> this
       (on-entity-delete f) 
-      (on-child-delete :directories #(f %1 %2 (f/directory (str (:path %2) "/" %3))))))
+      (on-child-delete :directories #(f %1 %2 (d/directory (str (:path %2) "/" %3))))))
   
   FileEntityHandlers
   (on-file-create [this f]
-    (on-child-create this :files #(f %1 %2 (fs/file (str (:path %2) "/" %3)))))
+    (on-child-create this :files #(f %1 %2 (f/file (str (:path %2) "/" %3)))))
   (on-file-delete [this f]
-    (on-child-delete this :files #(f %1 %2 (fs/file (str (:path %2) "/" %3)))))
+    (on-child-delete this :files #(f %1 %2 (f/file (str (:path %2) "/" %3)))))
   (on-file-modify [this f] this))
 
 (defn- normal-directory-watcher
   [refresh-fn opts]
   (normal-directory-watcher*
-    (partial update-directory! refresh-fn) 
-    (fn [m path]
-      (when-let [d (apply f/directory path opts)]
-        (assoc m (:path d) d)))
-    (fn [m path]
-      (when-let [d (apply f/directory path opts)]
-        (dissoc m (:path d) d)))))
+    #(update-directory! refresh-fn %) 
+    #(vector (fs/absolute-path %))
+    (fn [p _] (apply d/directory p opts))))
 
 ;; ## Putting it together
 
@@ -99,7 +89,7 @@
   "Create directory watch function using the given options."
   [& {:keys [recursive refresh] :as opts}]
   (let [opts (apply concat opts)
-        refresh (or refresh f/refresh-directory)]
+        refresh (or refresh d/refresh-directory)]
     (if recursive
       (recursive-directory-watcher refresh opts)
       (normal-directory-watcher refresh opts))))  

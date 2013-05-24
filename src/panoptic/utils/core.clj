@@ -2,6 +2,11 @@
       :author "Yannick Scherer"}
   panoptic.utils.core)
 
+(defn unix-timestamp
+  "Get Unix Timestamp in Milliseconds"
+  []
+  (System/currentTimeMillis))
+
 (defn match?
   "Check if the given String matches the given Pattern."
   [p s]

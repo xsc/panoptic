@@ -5,6 +5,32 @@
   (:require [panoptic.utils.core :as u]
             [panoptic.data.core :as data]))
 
+;; ## WatchRunner Protocol
+
+(defprotocol WatchRunner
+  "Protocol for Watchers. Watchers should also implement clojure.lang.IDeref"
+  (watch-entities! [this es]
+    "Add Entities to Watch List.")
+  (unwatch-entities! [this es]
+    "Remove Entities from Watch List.")
+  (watched-entities [this]
+    "Get current entity map.")
+  (start-watcher! [this]
+    "Start Watcher Loop.")
+  (stop-watcher! [this]
+    "Stop Watcher Loop. Returns a future that can be used to wait for
+     shutdown completion."))
+
+(defn watch-entity!
+  "Add single Entity to Watch List."
+  [w e]
+  (watch-entities! w [e]))
+
+(defn unwatch-entity!
+  "Remove single Entity from Watch List."
+  [w e]
+  (unwatch-entities! w [e]))
+
 ;; ## Protocol for WatchFn
 
 (defprotocol WatchFunction
@@ -12,10 +38,10 @@
     "Get WatchFn's update function.")
   (entity-handler [this]
     "Get WatchFn's entity handler")
-  (add-entities [this m es] 
-    "Add entities to a map using the given WatchFn's add function.")
-  (remove-entities [this m es]
-    "Add entities to a map using the given WatchFn's add function.") 
+  (create-entity-keys [this e] 
+    "Create keys to be added to the entity map bsaed on a root entity.")
+  (create-entity-value [this k e]
+    "Create initial value for entity.")
   (wrap-entity-handler [this f]
     "Wrap a WatchFn's entity handler function using the given one.")
   (wrap-watch-fn [this f]
@@ -62,6 +88,28 @@
         (catch Exception ex
           (error ex "in update function for: " entity-key))))))
 
+(defn add-entities
+  [watch-fn m es]
+  (let [create-keys (partial create-entity-keys watch-fn)
+        create-value (partial create-entity-value watch-fn)]
+    (reduce
+      (fn [m e]
+        (let [ks (create-keys e)]
+          (reduce
+            (fn [m k]
+              (if (contains? m k) m (assoc m k (ref (create-value k e)))))
+            m ks)))
+      m es)))
+
+(defn remove-entities
+  [watch-fn m es]
+  (let [create-keys (partial create-entity-keys watch-fn)]
+    (reduce
+      (fn [m e]
+        (let [ks (create-keys e)]
+          (reduce dissoc m ks)))
+      m es)))
+
 ;; ## Watch Logic
 ;;
 ;; The watcher logic is a type with the following keys/fields: 
@@ -74,38 +122,22 @@
 ;; - `handle-fn`: a function that takes a watcher, an entity key and the entity and 
 ;;   performs any tasks changes to the entity require
 
-(defn add-entities*
-  [f m es]
-  (let [f (or f #(assoc %1 %2 %2))]
-    (reduce
-      (fn [m e]
-        (or (f m e) m))
-      m es)))
-
-(defn remove-entities*
-  [f m es]
-  (let [f (or f dissoc)]
-    (reduce
-      (fn [m e]
-        (or (f m e) m))
-      m es)))
-
 (defmacro defwatch
   [id & entity-handlers]
   (let [T (gensym "T")]
     `(do 
-       (deftype ~T [update-fn# add-fn# remove-fn# handle-fn#]
+       (deftype ~T [update-fn# key-fn# value-fn# handle-fn#]
          WatchFunction
          (update-function [this#] update-fn#)
          (entity-handler [this#] handle-fn#)
-         (add-entities [this# m# es#] (add-entities* add-fn# m# es#))
-         (remove-entities [this# m# es#] (remove-entities* remove-fn# m# es#))
-         (wrap-entity-handler [this# f#] (new ~T update-fn# add-fn# remove-fn# (f# handle-fn#)))
-         (wrap-watch-fn [this# f#] (new ~T (f# update-fn#) add-fn# remove-fn# handle-fn#))
+         (create-entity-keys [this# e#] (key-fn# e#))
+         (create-entity-value [this# k# e#] (value-fn# k# e#))
+         (wrap-entity-handler [this# f#] (new ~T update-fn# key-fn# value-fn# (f# handle-fn#)))
+         (wrap-watch-fn [this# f#] (new ~T (f# update-fn#) key-fn# value-fn# handle-fn#))
          ~@entity-handlers)
        (defn ~id
          ([u#] (~id u# nil nil))
-         ([u# a# r#] (new ~T u# (or a# #(assoc %1 %2 %2)) (or r# dissoc) nil))))))
+         ([u# a# r#] (new ~T u# (or a# vector) (or r# #(identity %2)) nil))))))
 
 (defwatch watch-fn)
 

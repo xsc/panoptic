@@ -24,7 +24,7 @@
         threads (doall
                   (for [[n e] (map vector (range) entities)]
                     (let [thread-id (keyword (str (name id) "-" n))
-                          [ft f] (run-watcher-thread! thread-id w watch-fn interval e (* n offset))]
+                          [ft f] (run-standalone-watcher! thread-id w watch-fn (* n offset) interval e)]
                       (-> {}
                         (assoc :thread ft)
                         (assoc :entities e)

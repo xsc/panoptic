@@ -18,7 +18,7 @@
   (fact "about file-watcher's add/remove entity logic"
     (let [p (fs/absolute-path "some-file")]
       fw => #(satisfies? WatchFunction %)
-      (add-entities fw {} ["some-file"]) => { p {:path p}}
+      (add-entities fw {} ["some-file"]) => #(contains? % p)
       (remove-entities fw {p {:path p}} ["some-file"]) => {})) 
 
   (tabular 
@@ -31,13 +31,13 @@
         (checksum u) => ?new-cs
         (map #(% u) ?flags-set) => #(every? truthy %)
         (map #(% u) ?flags-unset) => #(every? falsey %)))
-    ?initial-cs      ?new-cs     ?missing   ?flags-set      ?flags-unset
-    nil              nil         nil        [missing?]      [created? deleted? modified?] 
-    nil              "abc"       nil        []              [created? deleted? modified? missing?] 
-    nil              "abc"       true       [created?]      [missing? deleted? modified?] 
-    "abc"            nil         nil        [deleted?]      [created? missing? modified?] 
-    "abc"            "def"       nil        [modified?]     [created? missing? deleted?] 
-    "abc"            "abc"       nil        []              [created? missing? deleted? modified?]) 
+    ?initial-cs      ?new-cs     ?missing   ?flags-set               ?flags-unset
+    nil              nil         nil        [missing?]               [created? deleted? modified? changed?] 
+    nil              "abc"       nil        []                       [created? deleted? modified? missing? changed?] 
+    nil              "abc"       true       [changed? created?]      [missing? deleted? modified?] 
+    "abc"            nil         nil        [changed? deleted?]      [created? missing? modified?] 
+    "abc"            "def"       nil        [changed? modified?]     [created? missing? deleted?] 
+    "abc"            "abc"       nil        []                       [created? missing? deleted? modified? changed?]) 
 
   (tabular
     (fact "about file-watcher's handler logic"

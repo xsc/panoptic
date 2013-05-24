@@ -14,7 +14,7 @@
 (tabular 
   (fact "about generic runners"
     (let [a (atom 0)
-          f (watch-fn (fn [_] @a) #(assoc %1 %2 0) dissoc)
+          f (watch-fn (fn [_] @a) nil (constantly 0))
           w (?runner f 10)]
       (watch-entities! w [:a :b]) => w
       (watched-entities w) => { :a 0 :b 0 }
@@ -32,4 +32,4 @@
         (deref stop) => falsey)))
   ?runner
   simple-watcher
-  #(multi-watcher %1 2 %2))
+  #_(multi-watcher %1 2 %2))

@@ -15,11 +15,12 @@
   (fact "about directory-watcher's add/remove logic"
     (let [p (fs/absolute-path "some-file")]
       dw => #(satisfies? WatchFunction %)
-      (let [r (add-entities dw {} ["some-file"])]
+      (let [r (add-entities dw {} ["some-file"])
+            e @(get r p)]
         (count r) => 1
-        (:path (get r p)) => p
-        (get r p) => missing?
-        (:opts (get r p)) => (contains [:refresh fn?]))
+        (:path e) => p
+        e => missing?
+        (:opts e) => (contains [:refresh fn?]))
       (remove-entities dw {p {:path p}} ["some-file"]) => {}))
 
   (let [c (+ 3 (rand-int 10))
@@ -65,19 +66,20 @@
       (reset! refreshment (when ?exists {}))
       (let [u (update-entity! dw nil "x" (-> {:path "x"} ?k))]
         (:path u) => "x"
+        (changed? u) => ?changed
         (missing? u) => ?missing
         (created? u) => ?created
         (deleted? u) => ?deleted))
-    ?k            ?exists     ?missing ?created ?deleted
-    identity      false       falsey   falsey    truthy
-    set-created   false       falsey   falsey    truthy
-    set-deleted   false       truthy   falsey    falsey
-    set-missing   false       truthy   falsey    falsey
+    ?k            ?exists     ?missing ?created  ?deleted ?changed
+    identity      false       falsey   falsey    truthy   truthy
+    set-created   false       falsey   falsey    truthy   truthy
+    set-deleted   false       truthy   falsey    falsey   falsey
+    set-missing   false       truthy   falsey    falsey   falsey
 
-    identity      true        falsey   falsey    falsey
-    set-created   true        falsey   falsey    falsey
-    set-deleted   true        falsey   truthy    falsey
-    set-missing   true        falsey   truthy    falsey)
+    identity      true        falsey   falsey    falsey   falsey
+    set-created   true        falsey   falsey    falsey   falsey
+    set-deleted   true        falsey   truthy    falsey   truthy
+    set-missing   true        falsey   truthy    falsey   truthy)
   
   (let [a (atom [])
         dw (-> dw
