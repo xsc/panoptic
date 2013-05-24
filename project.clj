@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [com.taoensso/timbre "1.6.0"]
                  [potemkin "0.2.2"]
-                 [pandect "0.2.2"]]
+                 [pandect "0.2.3"]]
   :profiles {:dev {:dependencies [[midje "1.5.1"]]
                    :plugins [[lein-midje "3.0.1"]]}
              :examples {:source-paths ["examples"]}}
