@@ -39,3 +39,9 @@
        nil
        v)
      default-value)))
+
+(defn clear!
+  "Clear Queue."
+  [^LinkedBlockingQueue q] 
+  (.clear q)
+  q)

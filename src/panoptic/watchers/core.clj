@@ -110,6 +110,12 @@
           (reduce dissoc m ks)))
       m es)))
 
+(defn read-watched-entities
+  [entities-ref]
+  (->> @entities-ref
+    (map (fn [[k v]] [k @v]))
+    (into {})))
+
 ;; ## Watch Logic
 ;;
 ;; The watcher logic is a type with the following keys/fields: 

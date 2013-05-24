@@ -4,20 +4,20 @@
   (:use [potemkin :only [import-vars]])
   (:require [taoensso.timbre :as timbre :only [set-level]]
             [panoptic.watchers core file-watcher directory-watcher]
-            [panoptic.runners simple multi-threaded]
+            [panoptic.runners simple-runner multi-runner]
             [panoptic.data file directory]))
 
 ;; ## Import
 
 (import-vars
-  [panoptic.runners.simple
+  [panoptic.runners.simple-runner
    
-   simple-watcher
+   simple-runner
    start-simple-watcher!]
 
-  [panoptic.runners.multi-threaded
+  [panoptic.runners.multi-runner
    
-   multi-watcher
+   multi-runner
    start-multi-watcher!]
 
   [panoptic.watchers.core

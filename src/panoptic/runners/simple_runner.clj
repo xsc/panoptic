@@ -1,61 +1,53 @@
 (ns ^{:doc "Simple, single-threaded Watch Runners."
       :author "Yannick Scherer"}
-  panoptic.runners.simple
+  panoptic.runners.simple-runner
   (:use [taoensso.timbre :only [debug info warn error]]
         panoptic.watchers.core
         panoptic.runners.core)
   (:require [panoptic.utils.core :as u])) 
 
-;; ## Watcher Type
+;; ## Simple Runner
+;;
+;; The simple runner has its entities in a single atom. It runs a
+;; standlone watcher as defined in `panoptic.runners.core`.
 
-(deftype SimpleWatcher [id watch-fn interval entities thread-data]
+(deftype SimpleRunner [id watch-fn interval entities-atom stop-atom threads-atom]
   WatchRunner
   (watch-entities! [this es]
-    (dosync (alter entities #(add-entities watch-fn % es))) 
+    (swap! entities-atom #(add-entities watch-fn % es))
     this)
   (unwatch-entities! [this es]
-    (dosync (alter entities #(remove-entities watch-fn % es))) 
-    this)
+    (swap! entities-atom #(remove-entities watch-fn % es))
+    this) 
   (watched-entities [this]
-    (->> @entities
-      (map (fn [[k v]] [k @v]))
-      (into {})))
+    (read-watched-entities entities-atom))
   (start-watcher! [this]
-    (dosync
-      (when-not @thread-data
-        (ref-set thread-data (run-standalone-watcher! id this watch-fn nil interval entities))))
+    (swap! threads-atom #(or % (run-standalone-watcher! id this watch-fn nil interval entities-atom stop-atom)))
+    (reset! stop-atom false)
     this)
   (stop-watcher! [this]
-    (dosync
-      (when-let [[ft f] @thread-data]
-        (ref-set thread-data nil)
-        (f)
-        ft)))
-
+    (reset! stop-atom true)
+    (let [ts (when-let [threads @threads-atom]
+               (reset! threads-atom nil)
+               threads)]
+      (future (doseq [t ts] @t))))
+  
   clojure.lang.IDeref
   (deref [_]
-    (let [[ft _] @thread-data]
-      (when ft @ft)))
-  
-  Object
-  (toString [this]
-    (pr-str @entities)))
+    (doseq [t @threads-atom] @t)))
 
-(defmethod print-method SimpleWatcher
+(defmethod print-method SimpleRunner
   [o w]
   (print-simple 
-    (str "#<SimpleWatcher: " (.toString o) ">")
+    (str "#<SimpleRunner: " (watched-entities o) ">")
     w))
 
-(defn simple-watcher
-  "Create a generic, single-threaded Watcher."
+;; ## Create Functions
+
+(defn simple-runner
+  "Create a generic, single-threaded WatchRunner."
   [watch-fn interval] 
-  (SimpleWatcher. 
-    (keyword (gensym "simple-watcher-")) 
-    watch-fn 
-    (or interval 1000) 
-    (ref {}) 
-    (ref nil)))
+  (SimpleRunner. (generate-watcher-id) watch-fn (or interval 1000) (atom {}) (atom nil) (atom nil)))
 
 (defn start-simple-watcher!*
   "Create and start generic, single-threaded Watcher using: 
@@ -64,7 +56,7 @@
    - additional options (e.g. the watch loop interval in milliseconds)."
   [watch-fn initial-entities & {:keys [interval]}]
   (->
-    (simple-watcher watch-fn interval)
+    (simple-runner watch-fn interval)
     (watch-entities! initial-entities)
     (start-watcher!)))
 
