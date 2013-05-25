@@ -35,4 +35,7 @@
           (deref stop) => falsey)))
     ?runner
     (simple-runner f update-interval) 
-    (multi-runner f :none 1 update-interval)))
+    (multi-runner f :none 1 update-interval)
+    (multi-runner f :none 4 update-interval)
+    (multi-runner f :fair 1 update-interval)
+    (multi-runner f :fair 4 update-interval)))
