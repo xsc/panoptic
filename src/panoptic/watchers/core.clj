@@ -9,9 +9,9 @@
 
 (defprotocol WatchRunner
   "Protocol for Watchers. Watchers should also implement clojure.lang.IDeref"
-  (watch-entities! [this es]
+  (watch-entities!* [this es metadata]
     "Add Entities to Watch List.")
-  (unwatch-entities! [this es]
+  (unwatch-entities!* [this es metadata]
     "Remove Entities from Watch List.")
   (watched-entities [this]
     "Get current entity map.")
@@ -21,15 +21,23 @@
     "Stop Watcher Loop. Returns a future that can be used to wait for
      shutdown completion."))
 
+(defn watch-entities!
+  ([w es] (watch-entities!* w es nil)) 
+  ([w es m] (watch-entities!* w es m)))
+
+(defn unwatch-entities!
+  ([w es] (unwatch-entities!* w es nil)) 
+  ([w es m] (unwatch-entities!* w es m)))
+
 (defn watch-entity!
   "Add single Entity to Watch List."
-  [w e]
-  (watch-entities! w [e]))
+  ([w e m] (watch-entities!* w [e] m))
+  ([w e] (watch-entity! w e nil)))
 
 (defn unwatch-entity!
   "Remove single Entity from Watch List."
-  [w e]
-  (unwatch-entities! w [e]))
+  ([w e m] (unwatch-entities!* w [e] m))
+  ([w e] (unwatch-entity! w e nil)))
 
 ;; ## Protocol for WatchFn
 
@@ -38,9 +46,10 @@
     "Get WatchFn's update function.")
   (entity-handler [this]
     "Get WatchFn's entity handler")
-  (create-entity-keys [this e] 
-    "Create keys to be added to the entity map bsaed on a root entity.")
-  (create-entity-value [this k e]
+  (create-entity-keys [this e metadata] 
+    "Create keys to be added to the entity map based on a root entity.
+     Result elements may be a single values or vectors of [<key> <metadata>].")
+  (create-entity-value [this k e metadata]
     "Create initial value for entity.")
   (wrap-entity-handler [this f]
     "Wrap a WatchFn's entity handler function using the given one.")
@@ -89,24 +98,25 @@
           (error ex "in update function for: " entity-key))))))
 
 (defn add-entities
-  [watch-fn m es]
-  (let [create-keys (partial create-entity-keys watch-fn)
+  [watch-fn m es metadata]
+  (let [create-keys #(create-entity-keys watch-fn % metadata)
         create-value (partial create-entity-value watch-fn)]
     (reduce
       (fn [m e]
         (let [ks (create-keys e)]
           (reduce
             (fn [m k]
-              (if (contains? m k) m (assoc m k (ref (create-value k e)))))
+              (let [[k metadata] (if (vector? k) k [k nil])]
+                (if (contains? m k) m (assoc m k (ref (create-value k e metadata))))))
             m ks)))
       m es)))
 
 (defn remove-entities
-  [watch-fn m es]
-  (let [create-keys (partial create-entity-keys watch-fn)]
+  [watch-fn m es metadata]
+  (let [create-keys #(create-entity-keys watch-fn % metadata)]
     (reduce
       (fn [m e]
-        (let [ks (create-keys e)]
+        (let [ks (->> (create-keys e) (map (fn [x] (if (vector? x) (first x) x))))]
           (reduce dissoc m ks)))
       m es)))
 
@@ -136,14 +146,14 @@
          WatchFunction
          (update-function [this#] update-fn#)
          (entity-handler [this#] handle-fn#)
-         (create-entity-keys [this# e#] (key-fn# e#))
-         (create-entity-value [this# k# e#] (value-fn# k# e#))
+         (create-entity-keys [this# e# m#] (key-fn# e# m#))
+         (create-entity-value [this# k# e# m#] (value-fn# k# e# m#))
          (wrap-entity-handler [this# f#] (new ~T update-fn# key-fn# value-fn# (f# handle-fn#)))
          (wrap-watch-fn [this# f#] (new ~T (f# update-fn#) key-fn# value-fn# handle-fn#))
          ~@entity-handlers)
        (defn ~id
          ([u#] (~id u# nil nil))
-         ([u# a# r#] (new ~T u# (or a# vector) (or r# #(identity %2)) nil))))))
+         ([u# a# r#] (new ~T u# (or a# (fn [x# _#] [x#])) (or r# (fn [_# x# _#] x#)) nil))))))
 
 (defwatch watch-fn)
 

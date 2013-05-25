@@ -13,11 +13,11 @@
 
 (deftype SimpleRunner [id watch-fn interval entities-atom stop-atom threads-atom]
   WatchRunner
-  (watch-entities! [this es]
-    (swap! entities-atom #(add-entities watch-fn % es))
+  (watch-entities!* [this es metadata]
+    (swap! entities-atom #(add-entities watch-fn % es metadata))
     this)
-  (unwatch-entities! [this es]
-    (swap! entities-atom #(remove-entities watch-fn % es))
+  (unwatch-entities!* [this es metadata]
+    (swap! entities-atom #(remove-entities watch-fn % es metadata))
     this) 
   (watched-entities [this]
     (read-watched-entities entities-atom))

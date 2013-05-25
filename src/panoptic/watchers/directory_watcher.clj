@@ -13,8 +13,6 @@
 ;; ## Protocol
 
 (defprotocol DirectoryEntityHandlers
-  (^:private on-subdirectory-create [this f])
-  (^:private on-subdirectory-delete [this f])
   (on-directory-create [this f])
   (on-directory-delete [this f]))
 
@@ -24,8 +22,9 @@
   "Check the given directory for new files/subdirectories, returning `nil` if it was deleted."
   [refresh-fn d0]
   (let [missing? (not (data/exists? d0))
+        d0 (data/clear-children-diff d0)
         d (refresh-fn d0)]
-    (cond (not (or missing? d))  (-> d0 (data/set-children-diff d) (data/set-deleted)) 
+    (cond (not (or missing? d))  (-> d0 (data/set-children-diff d) (data/set-deleted) (data/clear-children)) 
           (and missing? (not d)) (data/set-missing d0)
           (and missing? d)       (-> d0 (data/set-children-diff d) (data/set-created)) 
           :else (-> d0 (data/set-children-diff d) (data/set-untouched)))))
@@ -51,10 +50,16 @@
   (->
     (recursive-directory-watcher*
       (partial update-directory! refresh-fn) 
-      (fn [k] (vector (fs/absolute-path k)))
-      (fn [p _] (apply d/directory p opts)))
-    (on-child-create :directories #(watch-entity! %1 [%3])) 
-    (on-child-delete :directories #(unwatch-entity! %1 %3))))
+      (fn [k created?]
+        (let [paths (cons (fs/absolute-path k) (fs/list-directories-recursive k))]
+          (if-not created?
+            paths
+            (map #(vector % created?) paths))))
+      (fn [p _ created?] 
+        (let [dir (apply d/directory p opts)]
+          (if-not created? dir (data/set-missing dir)))))
+    (on-child-create :directories #(watch-entity! %1 (str (:path %2) "/" %3) :created)) 
+    (on-child-delete :directories #(unwatch-entity! %1 (str (:path %2) "/" %3)))))
 
 ;; ## Normal Directory Watcher
 
@@ -80,8 +85,8 @@
   [refresh-fn opts]
   (normal-directory-watcher*
     #(update-directory! refresh-fn %) 
-    #(vector (fs/absolute-path %))
-    (fn [p _] (apply d/directory p opts))))
+    (fn [k _] (vector (fs/absolute-path k)))
+    (fn [p _ _] (apply d/directory p opts))))
 
 ;; ## Putting it together
 

@@ -15,13 +15,13 @@
   (fact "about directory-watcher's add/remove logic"
     (let [p (fs/absolute-path "some-file")]
       dw => #(satisfies? WatchFunction %)
-      (let [r (add-entities dw {} ["some-file"])
+      (let [r (add-entities dw {} ["some-file"] nil)
             e @(get r p)]
         (count r) => 1
         (:path e) => p
         e => missing?
         (:opts e) => (contains [:refresh fn?]))
-      (remove-entities dw {p {:path p}} ["some-file"]) => {}))
+      (remove-entities dw {p {:path p}} ["some-file"] nil) => {}))
 
   (let [c (+ 3 (rand-int 10))
         s (repeatedly #(str (gensym "f")))

@@ -110,30 +110,35 @@
   [m]
   (get m ::children))
 
+(defn clear-children
+  "Remove Children from Entity Map (but keep diff)."
+  [m]
+  (dissoc m ::children))
+
 (defn set-children-diff
   "Create map describing the difference between an old and a new entity state's children."
   [m0 m1]
-  (assoc-in (or m1 m0) [::children ::diff]
-            (let [c0 (children m0)
-                  c1 (children m1)
-                  ks (distinct (concat (keys c0) (keys c1)))]
-              (reduce
-                (fn [r k]
-                  (let [old-children (set (get c0 k))
-                        new-children (set (get c1 k))]
-                    (assoc r k {:created (s/difference new-children old-children)
-                                :deleted (s/difference old-children new-children)})))
-                {} ks))))
+  (assoc (or m1 m0) ::diff
+         (let [c0 (children m0)
+               c1 (children m1)
+               ks (distinct (concat (keys c0) (keys c1)))]
+           (reduce
+             (fn [r k]
+               (let [old-children (set (get c0 k))
+                     new-children (set (get c1 k))]
+                 (assoc r k {:created (s/difference new-children old-children)
+                             :deleted (s/difference old-children new-children)})))
+             {} ks))))
 
 (defn children-diff
   "Get diff map from entity."
   [m]
-  (get-in m [::children ::diff]))
+  (::diff m))
 
 (defn clear-children-diff
   "Remove diff map from entity."
   [m]
-  (update-in m [::children] dissoc ::diff))
+  (dissoc m ::diff))
 
 ;; ## The Ultimate Check
 

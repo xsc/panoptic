@@ -111,12 +111,12 @@
                       entities-atom stop-atom threads-atom
                       notify-queue]
   WatchRunner
-  (watch-entities! [this es]
-    (swap! entities-atom #(add-entities watch-fn % es))
+  (watch-entities!* [this es metadata]
+    (swap! entities-atom #(add-entities watch-fn % es metadata))
     (q/push! notify-queue ENTITY_MAP_ADD)
     this)
-  (unwatch-entities! [this es]
-    (swap! entities-atom #(remove-entities watch-fn % es))
+  (unwatch-entities!* [this es metadata]
+    (swap! entities-atom #(remove-entities watch-fn % es metadata))
     (q/push! notify-queue ENTITY_MAP_REMOVE)
     this)
   (watched-entities [this]
@@ -141,8 +141,11 @@
 
   clojure.lang.IDeref
   (deref [_]
-    (doseq [{:keys [thread entities]} @threads-atom]
-      @thread)))
+    (try
+      (doseq [thread (collect-threads @threads-atom)]
+        @thread)
+      (catch Exception ex
+        (error ex "when dereferencing MultiRunner threads.")))))
 
 (defmethod print-method MultiRunner
   [o w]
@@ -167,6 +170,17 @@
       (dosync
         (doseq [{:keys [entities]} (vals updaters)]
           (ref-set entities current-entities))))))
+
+(defmethod create-distributor :fair
+  [_]
+  ;; - let threads handle equal portions
+  ;; - do not redistribute on entity modification
+  (fn [updaters interval current-entities e]
+    (when (keyword? e)
+      ;; TODO
+      )
+    )
+  )
 
 ;; ## Creation/Start Functions
 

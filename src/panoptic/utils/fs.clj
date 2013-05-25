@@ -95,6 +95,11 @@
         (when (.isDirectory f)
           (.getCanonicalPath f))))))
 
+(defn list-directories-recursive
+  [path]
+  (let [child-dirs (list-directories-absolute path)]
+    (concat child-dirs (mapcat list-directories-recursive child-dirs))))
+
 (defn last-modified
   "Get time of last modification in milliseconds since epoch."
   [path]

@@ -77,5 +77,5 @@
   (let [checker (or (checksum-fn checksum) cs/crc32)]
     (file-watcher*
       #(update-file! checker %)
-      #(vector (fs/absolute-path %))
-      (fn [p _] (f/file p)))))
+      (fn [k _] (vector (fs/absolute-path k)))
+      (fn [p _ _] (f/file p)))))

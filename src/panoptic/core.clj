@@ -4,22 +4,11 @@
   (:use [potemkin :only [import-vars]])
   (:require [taoensso.timbre :as timbre :only [set-level]]
             [panoptic.watchers core file-watcher directory-watcher]
-            [panoptic.runners simple-runner multi-runner]
-            [panoptic.data file directory]))
+            [panoptic.runners simple-runner multi-runner]))
 
 ;; ## Import
 
 (import-vars
-  [panoptic.runners.simple-runner
-   
-   simple-runner
-   start-simple-watcher!]
-
-  [panoptic.runners.multi-runner
-   
-   multi-runner
-   start-multi-watcher!]
-
   [panoptic.watchers.core
    
    watch-entities!
@@ -46,7 +35,17 @@
    directory-watcher
 
    on-directory-create
-   on-directory-delete])
+   on-directory-delete]
+  
+  [panoptic.runners.simple-runner
+   
+   simple-runner
+   start-simple-watcher!]
+
+  [panoptic.runners.multi-runner
+   
+   multi-runner
+   start-multi-watcher!])
 
 ;; ## Logging Access
 

@@ -95,6 +95,7 @@
      (while (not @stop-atom)
        (when-let [[k e] (q/poll! changes-queue update-interval nil)]
          (debug tag "Running Handler on:" k)
+         (trace tag k "=" e)
          (run-entity-handler! watch-fn watcher k e) ))
      (info tag "Handler Thread stopped."))))
 
