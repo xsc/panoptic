@@ -55,7 +55,7 @@
    - the entity that prompted the change (or :add/:remove(:init)
   "
   [go? tag distribute-fn updaters update-interval entities-atom stop-atom notify-queue changes-queue]
-  (let [distribute! (partial distribute-fn updaters update-interval)
+  (let [distribute! #(future (distribute-fn updaters update-interval %1 %2))
         distribute-interval (/ update-interval 2)]
     (future-with-errors
       (info tag "Distribution Thread started ...")
@@ -175,12 +175,21 @@
   [_]
   ;; - let threads handle equal portions
   ;; - do not redistribute on entity modification
+  ;; - when entities are removed, sleep before redistribution
   (fn [updaters interval current-entities e]
     (when (keyword? e)
-      ;; TODO
-      )
-    )
-  )
+      (let [updater-count (count updaters)
+            entity-count (count current-entities)
+            entities-per-updater (long (Math/ceil (/ entity-count updater-count))) 
+            parts (->> current-entities 
+                    (partition entities-per-updater entities-per-updater nil)
+                    (map #(into {} %)))
+            parts (concat parts (repeat {}))]
+        (when (= e :remove)
+          (u/sleep interval))
+        (dosync
+          (doseq [[m {:keys [entities]}] (map vector parts (vals updaters))]
+            (ref-set entities m)))))))
 
 ;; ## Creation/Start Functions
 
