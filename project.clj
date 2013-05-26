@@ -1,5 +1,5 @@
-(defproject panoptic "0.1.0-SNAPSHOT"
-  :description "File/Directory Monitoring Library"
+(defproject panoptic "0.1.0"
+  :description "File & Directory Monitoring for Clojure."
   :url "https://github.com/xsc/panoptic"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
