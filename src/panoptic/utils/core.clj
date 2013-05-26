@@ -26,3 +26,7 @@
     (Thread/sleep interval)
     (catch Exception _ nil)))
 
+(def log2
+  (let [C (Math/log 2)]
+    (fn [x]
+      (/ (Math/log x) C))))

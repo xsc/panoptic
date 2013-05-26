@@ -43,7 +43,14 @@
 (defn set-changed
   "Set changed flag."
   [m]
-  (assoc m ::changed true))
+  (-> m
+    (assoc ::changed true)
+    (assoc ::last-changed (u/unix-timestamp))))
+
+(defn last-changed
+  "Get timestamp of last change."
+  [m]
+  (::last-changed m))
 
 (defn clear-changed
   "Clear changed Flag."
@@ -66,9 +73,7 @@
                 m# (if cs#
                      (set-checksum m# cs#)
                      (clear-checksum m#))]
-            (if ~is-change?
-              (set-changed m#)
-              (clear-changed m#))))))))
+            (~(if is-change? `set-changed `clear-changed) m#)))))))
 
 (def-change created  true)
 (def-change modified true)
@@ -118,17 +123,19 @@
 (defn set-children-diff
   "Create map describing the difference between an old and a new entity state's children."
   [m0 m1]
-  (assoc (or m1 m0) ::diff
-         (let [c0 (children m0)
-               c1 (children m1)
-               ks (distinct (concat (keys c0) (keys c1)))]
-           (reduce
-             (fn [r k]
-               (let [old-children (set (get c0 k))
-                     new-children (set (get c1 k))]
-                 (assoc r k {:created (s/difference new-children old-children)
-                             :deleted (s/difference old-children new-children)})))
-             {} ks))))
+  (let [c0 (children m0)
+        c1 (children m1)
+        ks (distinct (concat (keys c0) (keys c1)))
+        diff (reduce
+               (fn [r k]
+                 (let [old-children (set (get c0 k))
+                       new-children (set (get c1 k))]
+                   (assoc r k {:created (s/difference new-children old-children)
+                               :deleted (s/difference old-children new-children)})))
+               {} ks)]
+    (-> m0
+      (assoc ::children c1)
+      (assoc ::diff diff))))
 
 (defn children-diff
   "Get diff map from entity."

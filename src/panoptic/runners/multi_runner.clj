@@ -1,11 +1,12 @@
 (ns ^{:doc "Multi-Threaded Watch Runners"
       :author "Yannick Scherer"}
   panoptic.runners.multi-runner
-  (:use [taoensso.timbre :only [debug info warn error]]
+  (:use [taoensso.timbre :only [debug info warn error trace]]
         panoptic.runners.core
         panoptic.watchers.core)
   (:require [panoptic.utils.core :as u]
-            [panoptic.utils.queue :as q]))
+            [panoptic.utils.queue :as q]
+            [panoptic.runners.distributors :as d]))
 
 ;; ## Concept
 ;;
@@ -22,73 +23,40 @@
 
 ;; ## Logic
 
-(def ^:private ENTITY_MAP_ADD (Object.))
-(def ^:private ENTITY_MAP_REMOVE (Object.))
-
 (defn- run-multi-watcher-threads!
   "Create map of [index {:thread <future> :entities <ref>}] pairs, representing
    the desired number of threads availale for watching."
-  [go? id watcher watch-fn thread-count update-interval stop-atom changes-queue]
-  (let [tag (str "[" id "]")
-        offset (inc (int (/ update-interval thread-count)))]
+  [go? id watcher watch-fn distributor thread-count stop-atom changes-queue]
+  (let [tag (str "[" id "]")]
     (reduce
       (fn [m n]
-        (let [thread-tag (str "[" (generate-watcher-id id n) "]") 
+        (let [thread-id (generate-watcher-id id n) 
               thread-entities (ref {})
               thread (run-update-thread! 
-                       go? thread-tag watcher watch-fn 
-                       (* n offset) update-interval 
+                       go? thread-id watcher watch-fn 
+                       (d/thread-offset distributor n)
+                       (d/thread-interval distributor n)
                        stop-atom thread-entities changes-queue)]
           (assoc m n { :thread thread :entities thread-entities })))
       {} (range thread-count))))
 
-(defn- run-distribution-thread!
-  "Create future containing a distribution thread that redestributes the entities contained in 
-   `entities-atom` everytime an entity is delivered via `notify-queue` (including the special entities
-    ENTITY_MAP_ADD/ENTITY_MAP_REMOVE).
- 
-   `distribute-fn` is a function taking four arguments:
- 
-   - the thread map created by `run-multi-watcher-threads!`
-   - the update interval in milliseconds
-   - the complete entity map
-   - the entity that prompted the change (or :add/:remove(:init)
-  "
-  [go? tag distribute-fn updaters update-interval entities-atom stop-atom notify-queue changes-queue]
-  (let [distribute! #(future (distribute-fn updaters update-interval %1 %2))
-        distribute-interval (/ update-interval 2)]
-    (future-with-errors
-      (info tag "Distribution Thread started ...")
-      (q/clear! notify-queue)
-      (distribute! @entities-atom :init)
-      (deliver go? true)
-      (while (not @stop-atom)
-        (when-let [e (q/poll! notify-queue distribute-interval)]
-          (condp = e
-            ENTITY_MAP_ADD    (distribute! @entities-atom :add)
-            ENTITY_MAP_REMOVE (distribute! @entities-atom :remove)
-            (do 
-              (q/push! changes-queue e)
-              (distribute! @entities-atom e))))))))
-
 (defn- run-multi-watcher!
   "Create and start watcher/handler/distributor threads. Return a map with the respecitive keys
    `:updaters`/`:handler`/`:distributor`."
-  [id watcher watch-fn distribute-fn thread-count update-interval entities-atom stop-atom notify-queue]
-  (let [tag (str "[" id "]")
-        changes-queue (q/queue)
+  [id watcher watch-fn distributor thread-count entities-atom stop-atom notify-queue]
+  (let [changes-queue (q/queue)
         go? (promise)
         updater-threads (run-multi-watcher-threads!
                           go? id watcher watch-fn 
-                          thread-count update-interval 
+                          distributor thread-count
                           stop-atom notify-queue)
-        distr-thread (run-distribution-thread! 
-                       go? tag distribute-fn updater-threads update-interval
+        distr-thread (d/run-distribution-thread! 
+                       go? id distributor updater-threads
                        entities-atom stop-atom 
                        notify-queue changes-queue)
         handler-thread (run-handler-thread!
-                         go? tag watcher watch-fn
-                         update-interval 
+                         go? id watcher watch-fn
+                         (d/thread-interval distributor 0) 
                          stop-atom changes-queue)]
     @go?
     (-> {}
@@ -106,28 +74,22 @@
 
 ;; ## Multi Runner
 
-(deftype MultiRunner [id watch-fn distribute-fn 
-                      thread-count interval 
-                      entities-atom stop-atom threads-atom
-                      notify-queue]
+(deftype MultiRunner [id watch-fn distributor thread-count entities-atom stop-atom threads-atom notify-queue]
   WatchRunner
   (watch-entities!* [this es metadata]
     (swap! entities-atom #(add-entities watch-fn % es metadata))
-    (q/push! notify-queue ENTITY_MAP_ADD)
+    (d/notify-entities-added! notify-queue es)
     this)
   (unwatch-entities!* [this es metadata]
     (swap! entities-atom #(remove-entities watch-fn % es metadata))
-    (q/push! notify-queue ENTITY_MAP_REMOVE)
+    (d/notify-entities-removed! notify-queue es)
     this)
   (watched-entities [this]
     (read-watched-entities entities-atom))
   (start-watcher! [this]
     (reset! stop-atom false)
-    (swap! threads-atom #(or % (run-multi-watcher! 
-                                 id this watch-fn distribute-fn
-                                 thread-count interval 
-                                 entities-atom stop-atom
-                                 notify-queue)))
+    (swap! threads-atom #(or % (run-multi-watcher! id this watch-fn distributor thread-count
+                                                   entities-atom stop-atom notify-queue)))
     this)
   (stop-watcher! [this]
     (reset! stop-atom true)
@@ -153,44 +115,6 @@
     (str "#<MultiRunner: " (watched-entities o) ">")
     w))
 
-;; ## Distribution Logic
-
-(defmulti create-distributor 
-  (fn [x] (if (fn? x) ::fn x))
-  :default :none)
-
-(defmethod create-distributor ::fn [f] f)
-
-(defmethod create-distributor :none
-  [_]
-  ;; - let all threads handle all entities
-  ;; - do not redistribute on entity modification
-  (fn [updaters interval current-entities e]
-    (when (keyword? e)
-      (dosync
-        (doseq [{:keys [entities]} (vals updaters)]
-          (ref-set entities current-entities))))))
-
-(defmethod create-distributor :fair
-  [_]
-  ;; - let threads handle equal portions
-  ;; - do not redistribute on entity modification
-  ;; - when entities are removed, sleep before redistribution
-  (fn [updaters interval current-entities e]
-    (when (keyword? e)
-      (let [updater-count (count updaters)
-            entity-count (count current-entities)
-            entities-per-updater (long (Math/ceil (/ entity-count updater-count))) 
-            parts (->> current-entities 
-                    (partition entities-per-updater entities-per-updater nil)
-                    (map #(into {} %)))
-            parts (concat parts (repeat {}))]
-        (when (= e :remove)
-          (u/sleep interval))
-        (dosync
-          (doseq [[m {:keys [entities]}] (map vector parts (vals updaters))]
-            (ref-set entities m)))))))
-
 ;; ## Creation/Start Functions
 
 (defn multi-runner
@@ -199,8 +123,8 @@
   (let [thread-count (or thread-count 1)]
     (MultiRunner. 
       (generate-watcher-id) watch-fn 
-      (create-distributor distribute) 
-      thread-count interval 
+      (d/create-distributor distribute interval thread-count) 
+      thread-count
       (atom {}) (atom false) (atom nil)
       (q/queue))))
 

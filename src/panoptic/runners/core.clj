@@ -63,10 +63,11 @@
    periodically, until the value in the given stop-atom is set to true.
    An optional offset in milliseconds can be given that is used to let
    the thread sleep before being operational."
-  ([tag watcher watch-fn start-offset update-interval stop-atom entities-ref changes-queue]
-   (run-update-thread! nil tag watcher watch-fn start-offset update-interval stop-atom entities-ref changes-queue))
-  ([go-promise tag watcher watch-fn start-offset update-interval stop-atom entities-ref changes-queue]
-   (let [changes-ref (ref [])]
+  ([id watcher watch-fn start-offset update-interval stop-atom entities-ref changes-queue]
+   (run-update-thread! nil id watcher watch-fn start-offset update-interval stop-atom entities-ref changes-queue))
+  ([go-promise id watcher watch-fn start-offset update-interval stop-atom entities-ref changes-queue]
+   (let [tag (str "[" id "]")
+         changes-ref (ref [])]
      (future-with-errors
        (when go-promise @go-promise) 
        (when (and start-offset (pos? start-offset)) (u/sleep start-offset))
@@ -86,18 +87,19 @@
   "Run thread that polls from the given Queue and run's the given WatchFn's
    handler function on the entities it receives (expects [entity-key entity] 
    pairs) until the given stop-atom is set to true."
-  ([tag watcher watch-fn update-interval stop-atom changes-queue]
-   (run-handler-thread! nil tag watcher watch-fn update-interval stop-atom changes-queue))
-  ([go-promise tag watcher watch-fn update-interval stop-atom changes-queue]
-   (future-with-errors
-     (when go-promise @go-promise)
-     (info tag "Handler Thread running (poll timeout: " (str update-interval "ms)") "...")
-     (while (not @stop-atom)
-       (when-let [[k e] (q/poll! changes-queue update-interval nil)]
-         (debug tag "Running Handler on:" k)
-         (trace tag k "=" e)
-         (run-entity-handler! watch-fn watcher k e) ))
-     (info tag "Handler Thread stopped."))))
+  ([id watcher watch-fn update-interval stop-atom changes-queue]
+   (run-handler-thread! nil id watcher watch-fn update-interval stop-atom changes-queue))
+  ([go-promise id watcher watch-fn update-interval stop-atom changes-queue]
+   (let [tag (str "[" (generate-watcher-id id "-handle") "]")]
+     (future-with-errors
+       (when go-promise @go-promise)
+       (info tag "Handler Thread running (poll timeout: " (str update-interval "ms)") "...")
+       (while (not @stop-atom)
+         (when-let [[k e] (q/poll! changes-queue update-interval nil)]
+           (debug tag "Running Handler on:" k)
+           (trace tag k "=" e)
+           (run-entity-handler! watch-fn watcher k e) ))
+       (info tag "Handler Thread stopped.")))))
 
 ;; ## Standalone Watcher Thread
 
@@ -105,12 +107,11 @@
   "Run standalone watcher, consisting of a single watcher thread and a single
    handler thread. Returns a vector of those both threads (`[update handle]`)."
   [id watcher watch-fn start-offset update-interval entities-ref stop-atom]
-  (let [tag (str "[" id "]")
-        changes-queue (q/queue)
+  (let [changes-queue (q/queue)
         updater-thread (run-update-thread! 
-                        tag watcher watch-fn start-offset update-interval 
+                        id watcher watch-fn start-offset update-interval 
                         stop-atom entities-ref changes-queue)
         handler-thread (run-handler-thread!
-                        tag watcher watch-fn update-interval
+                        id watcher watch-fn update-interval
                         stop-atom changes-queue)]
     [updater-thread handler-thread]))
