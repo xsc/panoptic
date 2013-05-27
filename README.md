@@ -17,6 +17,9 @@ __Leiningen__ ([via Clojars](https://clojars.org/panoptic))
 
 __REPL__
 
+Thanks to [potemkin](https://github.com/ztellman/potemkin) panoptic's core functionality can be accessed
+via only one namespace:
+
 ```clojure
 (use 'panoptic.core)
 ```
