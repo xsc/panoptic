@@ -27,6 +27,7 @@
    
    file-watcher
    
+   unwatch-files-on-delete
    on-file-create
    on-file-modify
    on-file-delete]
@@ -35,6 +36,7 @@
    
    directory-watcher
 
+   unwatch-directories-on-delete
    on-directory-create
    on-directory-delete]
   
