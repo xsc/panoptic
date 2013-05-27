@@ -12,7 +12,7 @@ This is only for playing around for now. But much more functionality can be expe
 __Leiningen__ ([via Clojars](https://clojars.org/panoptic))
 
 ```clojure
-[panoptic "0.3.0"]
+[panoptic "0.2.0"]
 ```
 
 __REPL__
