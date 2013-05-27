@@ -52,7 +52,8 @@
   (create-entity-value [this k e metadata]
     "Create initial value for entity.")
   (wrap-entity-handler [this f]
-    "Wrap a WatchFn's entity handler function using the given one.")
+    "Wrap a WatchFn's entity handler function using the given one. The handler function
+     shall take the Watcher handling an entity, the entity key and the actual entity map. ")
   (wrap-watch-fn [this f]
     "Wrap a WatchFn's update function using the given one."))
 

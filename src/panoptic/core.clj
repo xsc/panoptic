@@ -4,7 +4,8 @@
   (:use [potemkin :only [import-vars]])
   (:require [taoensso.timbre :as timbre :only [set-level]]
             [panoptic.watchers core file-watcher directory-watcher]
-            [panoptic.runners simple-runner multi-runner]))
+            [panoptic.runners simple-runner multi-runner]
+            [panoptic.data.core :as data]))
 
 ;; ## Import
 
@@ -45,7 +46,13 @@
   [panoptic.runners.multi-runner
    
    multi-runner
-   start-multi-watcher!])
+   start-multi-watcher!]
+  
+  [panoptic.data.core
+   
+   last-changed
+   timestamp
+   checksum])
 
 ;; ## Logging Access
 
