@@ -21,13 +21,20 @@
    wrap-entity-handler
    after-entity-handler
    before-entity-handler
-   wrap-watch-fn]
+   wrap-watch-fn
+   
+   on-entity-matches
+   on-entity-create
+   on-entity-modify
+   on-entity-delete
+   on-child-create
+   on-child-delete
+   unwatch-on-delete]
 
   [panoptic.watchers.file-watcher
    
    file-watcher
    
-   unwatch-files-on-delete
    on-file-create
    on-file-modify
    on-file-delete]
@@ -36,7 +43,6 @@
    
    directory-watcher
 
-   unwatch-directories-on-delete
    on-directory-create
    on-directory-delete]
   

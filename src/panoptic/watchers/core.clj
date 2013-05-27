@@ -203,3 +203,10 @@
         (when-let [deleted (get-in diff [child-key :deleted])]
           (doseq [e deleted]
             (f w entity e)))))))
+
+;; ## Special Handlers
+
+(defn unwatch-on-delete
+  "Remove entities from watch pool when they are deleted."
+  [watch-fn]
+  (on-entity-delete watch-fn (fn [w k _] (unwatch-entity! w k))))

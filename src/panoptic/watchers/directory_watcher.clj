@@ -16,11 +16,6 @@
   (on-directory-create [this f])
   (on-directory-delete [this f]))
 
-(defn unwatch-directories-on-delete
-  "Unwatch Directories once they are deleted."
-  [watch-fn]
-  (on-directory-delete watch-fn #(unwatch-entity! %1 (:path %3))))
-
 ;; ## Logic
 
 (defn- update-directory!

@@ -15,11 +15,6 @@
   (on-file-modify [this f])
   (on-file-delete [this f]))
 
-(defn unwatch-files-on-delete
-  "Unwatch Files when they are deleted."
-  [watch-fn]
-  (on-file-delete watch-fn #(unwatch-entity! %1 (:path %3))))
-
 ;; ## Checksums
 
 (defmulti checksum-fn 
