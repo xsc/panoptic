@@ -119,10 +119,10 @@
 
 (defn multi-runner
   "Create a generic, multi-threaded Watcher."
-  [watch-fn distribute thread-count interval] 
+  [watch-fn id distribute thread-count interval] 
   (let [thread-count (or thread-count 1)]
     (MultiRunner. 
-      (generate-watcher-id) watch-fn 
+      (or id (generate-watcher-id)) watch-fn 
       (d/create-distributor distribute interval thread-count) 
       thread-count
       (atom {}) (atom false) (atom nil)

@@ -15,7 +15,7 @@
         f (watch-fn (fn [_] @a) nil (constantly 0))
         reset-a! #(do (reset! a %) (sleep (* 2 ?u)))]
     (fact "about simple runners"
-      (let [w (simple-runner f ?u)]
+      (let [w (simple-runner f :id ?u)]
         (reset-a! 0)
         (watch-entities! w [:a :b]) => truthy
         (watched-entities w) => { :a 0 :b 0 }

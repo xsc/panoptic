@@ -90,7 +90,7 @@
   ([id watcher watch-fn update-interval stop-atom changes-queue]
    (run-handler-thread! nil id watcher watch-fn update-interval stop-atom changes-queue))
   ([go-promise id watcher watch-fn update-interval stop-atom changes-queue]
-   (let [tag (str "[" (generate-watcher-id id "-handle") "]")]
+   (let [tag (str "[" (generate-watcher-id id "handle") "]")]
      (future-with-errors
        (when go-promise @go-promise)
        (info tag "Handler Thread running (poll timeout: " (str update-interval "ms)") "...")

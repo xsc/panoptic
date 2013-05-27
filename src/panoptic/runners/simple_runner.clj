@@ -46,5 +46,7 @@
 
 (defn simple-runner
   "Create a generic, single-threaded WatchRunner."
-  [watch-fn interval] 
-  (SimpleRunner. (generate-watcher-id) watch-fn (or interval 1000) (atom {}) (atom nil) (atom nil)))
+  [watch-fn id interval] 
+  (SimpleRunner. 
+    (or id (generate-watcher-id)) watch-fn (or interval 1000) 
+    (atom {}) (atom nil) (atom nil)))

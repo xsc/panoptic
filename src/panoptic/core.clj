@@ -57,15 +57,16 @@
 ;; ## Run Wrapper
 
 (defn- run!*
-  [watch-fn initial-entities & {:keys [interval threads distribute]}]
+  [watch-fn initial-entities & {:keys [id interval threads distribute]}]
   (let [interval (or interval 1000)
-        threads (or threads 1)]
+        threads (or threads 1)
+        id (keyword (or id (panoptic.runners.core/generate-watcher-id)))]
     (when (and (= threads 1) distribute)
       (timbre/warn "[panoptic] distribution strategy given but only one thread specfied!"))
     (->
       (if (= threads 1)
-        (simple-runner watch-fn interval)
-        (multi-runner watch-fn distribute threads interval))
+        (simple-runner watch-fn id interval)
+        (multi-runner watch-fn id distribute threads interval))
       (watch-entities! initial-entities)
       (start-watcher!))))
 

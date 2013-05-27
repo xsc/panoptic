@@ -15,7 +15,7 @@
     (tabular
       (let [a (atom 0)
             f (watch-fn #(assoc % :v @a) nil (constantly {})) 
-            w (multi-runner f ?distribute ?threads ?u)
+            w (multi-runner f :id ?distribute ?threads ?u)
             reset-a! #(do (reset! a %) (sleep (* 2 ?u)))
             es (take (* 2 ?threads) (map keyword (repeatedly gensym)))]
         (fact "about multi-runner"
