@@ -32,6 +32,12 @@ via only one namespace:
 - child file creation and deletion
 - creation and deletion of all nodes in a directory hierarchy
 
+## Roadmap
+
+- observing file modifications based on directories
+- observing the clipboard
+- observing web service data
+
 ## Quick Examples
 
 __Watching Files__
@@ -44,6 +50,11 @@ __Watching Files__
     (on-file-create #(println (:path %3) "created"))
     (on-file-delete #(println (:path %3) "deleted"))))
 (run-blocking! w ["error.log" "access.log"])
+
+;; -- or:
+(def r (run! w))
+(watch-entities! w ["error.log" "access.log"])
+@r
 ```
 
 __Watching Directories__
