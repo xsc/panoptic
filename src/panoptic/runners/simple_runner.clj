@@ -48,24 +48,3 @@
   "Create a generic, single-threaded WatchRunner."
   [watch-fn interval] 
   (SimpleRunner. (generate-watcher-id) watch-fn (or interval 1000) (atom {}) (atom nil) (atom nil)))
-
-(defn start-simple-watcher!*
-  "Create and start generic, single-threaded Watcher using: 
-   - a WatchFn instance
-   - the initial entities to watch
-   - additional options (e.g. the watch loop interval in milliseconds)."
-  [watch-fn initial-entities & {:keys [interval]}]
-  (->
-    (simple-runner watch-fn interval)
-    (watch-entities! initial-entities)
-    (start-watcher!)))
-
-(defn start-simple-watcher!
-  "Create and start generic, single-threaded Watcher using: 
-   - a WatchFn instance
-   - the initial entities to watch
-   - additional options (e.g. the watch loop interval in milliseconds)."
-  [watch-fn & args]
-  (if (or (not (seq args)) (keyword? (first args))) 
-    (apply start-simple-watcher!* watch-fn nil args)
-    (apply start-simple-watcher!* watch-fn args)))

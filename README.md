@@ -12,42 +12,47 @@ This is only for playing around for now. But much more functionality can be expe
 __Leiningen__ ([via Clojars](https://clojars.org/panoptic))
 
 ```clojure
-[panoptic "0.1.1"]
+[panoptic "0.3.0"]
 ```
 
-__Watching (possibly non-existing) Files__
+__REPL__
 
 ```clojure
 (use 'panoptic.core)
+```
 
-(def watcher
-  (-> (file-watcher :checksum :md5)
+## Observables
+
+- file creation, deletion and modification
+- directory creation and deletion
+- child directory creation and deletion
+- child file creation and deletion
+- creation and deletion of all nodes in a directory hierarchy
+
+## Quick Examples
+
+__Watching Files__
+
+```clojure
+
+(def w 
+  (-> (file-watcher :checksum :crc32)
     (on-file-modify #(println (:path %3) "changed"))
     (on-file-create #(println (:path %3) "created"))
-    (on-file-delete #(println (:path %3) "deleted"))
-    (start-simple-watcher! ["log.txt" "error.txt"] :interval 500)))
-
-...
-
-@(stop-watcher! watcher)
+    (on-file-delete #(println (:path %3) "deleted"))))
+(run-blocking! w ["error.log" "access.log"])
 ```
 
 __Watching Directories__
 
 ```clojure
-(use 'panoptic.core)
-
-(def watcher
+(def w
   (-> (directory-watcher :recursive true :extensions [:clj])
     (on-directory-create #(println "Directory" (:path %3) "created"))
     (on-directory-delete #(println "Directory" (:path %3) "deleted"))
     (on-file-create #(println "File" (:path %3) "created"))
-    (on-file-delete #(println "File" (:path %3) "deleted"))
-    (start-simple-watcher! ["/path/to/directory"] :interval 500)))
-
-...
-
-@(stop-watcher! watcher)
+    (on-file-delete #(println "File" (:path %3) "deleted"))))
+(run-blocking! w ["/var/log/my-logs"] :threads 4)
 ```
 
 ## Running Examples
