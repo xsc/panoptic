@@ -47,7 +47,7 @@ __Watching Directories__
 
 ```clojure
 (def w
-  (-> (directory-watcher :recursive true :extensions [:clj])
+  (-> (directory-watcher :recursive true :extensions [:log])
     (on-directory-create #(println "Directory" (:path %3) "created"))
     (on-directory-delete #(println "Directory" (:path %3) "deleted"))
     (on-file-create #(println "File" (:path %3) "created"))
