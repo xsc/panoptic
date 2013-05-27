@@ -127,24 +127,3 @@
       thread-count
       (atom {}) (atom false) (atom nil)
       (q/queue))))
-
-(defn start-multi-watcher!*
-  "Create and start generic, multi-threaded Watcher using: 
-   - a WatchFn instance
-   - the initial entities to watch
-   - additional options (e.g. the watch loop interval in milliseconds)."
-  [watch-fn initial-entities & {:keys [interval threads distribute]}]
-  (->
-    (multi-runner watch-fn distribute threads interval)
-    (watch-entities! initial-entities)
-    (start-watcher!)))
-
-(defn start-multi-watcher!
-  "Create and start generic, multi-threaded Watcher using: 
-   - a WatchFn instance
-   - the initial entities to watch
-   - additional options (e.g. the watch loop interval in milliseconds)."
-  [watch-fn & args]
-  (if (or (not (seq args)) (keyword? (first args))) 
-    (apply start-multi-watcher!* watch-fn nil args)
-    (apply start-multi-watcher!* watch-fn args)))

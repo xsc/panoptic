@@ -1,8 +1,6 @@
 (ns recursive-directory
   (:use panoptic.core))
 
-(set-log-level! :warn)
-
 (defn -main
   [& [path & _]]
   (if path
@@ -13,5 +11,5 @@
                 (on-file-delete #(println "   File" (:path %3) "deleted."))
                 (on-directory-create #(println "   Directory" (:path %3) "created."))
                 (on-directory-delete #(println "   Directory" (:path %3) "deleted.")))]
-        @(start-multi-watcher! w [path] :interval 200 :threads 4 :distribute :frequency))) 
+        @(run! w [path] :interval 200 :threads 4 :distribute :frequency))) 
     (println "Usage: lein run-example single-directory <path to directory>")))

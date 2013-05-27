@@ -11,5 +11,5 @@
                 (on-file-delete #(println "   File" (:path %3) "deleted."))
                 (on-directory-create #(println "   Directory" (:path %3) "created."))
                 (on-directory-delete #(println "   Directory" (:path %3) "deleted.")))]
-        @(start-simple-watcher! w [path] :interval 200))) 
+        @(run! w [path] :interval 200))) 
     (println "Usage: lein run-example single-directory <path to directory>")))
