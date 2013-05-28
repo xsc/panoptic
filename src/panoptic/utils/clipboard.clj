@@ -7,8 +7,10 @@
 
 (def ^:dynamic *clipboard* 
   "The clipboard to operate on."
-  (let [t (Toolkit/getDefaultToolkit)]
-    (.getSystemClipboard t)))
+  (try
+    (let [t (Toolkit/getDefaultToolkit)]
+      (.getSystemClipboard t))
+    (catch Exception _ nil)))
 
 (defn contents
   "Get Clipboard Contents if they match the given flavor (string by default)."
