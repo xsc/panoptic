@@ -25,7 +25,7 @@
 
 (defwatcher clipboard-watcher
   "Clipboard Watcher."
-  [& {:keys [checksum data-type]}]
+  [& {:keys [data-type]}]
   :let [data-fn (clipboard-data-fn data-type)]
   :update (fn [e]
             (let [e (assoc e :data (data-fn))] 
