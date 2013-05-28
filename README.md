@@ -53,7 +53,7 @@ __Watching Files__
 
 ;; -- or:
 (def r (run! w))
-(watch-entities! w ["error.log" "access.log"])
+(watch-entities! r ["error.log" "access.log"])
 @r
 ```
 
