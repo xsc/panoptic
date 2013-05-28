@@ -18,4 +18,5 @@
              :examples {:source-paths ["examples"]}}
   :aliases {"run-example" ["with-profile" "dev,examples" "run" "-m"]
             "midje-dev" ["with-profile" "test" "midje"]
+            "deps-all" ["with-profile" "1.3,test:1.4,test:1.5,test:1.6,test" "do" "clean," "deps"]})
             "midje-all" ["with-profile" "1.3,test:1.4,test:1.5,test:1.6,test" "do" "clean," "midje"]})
