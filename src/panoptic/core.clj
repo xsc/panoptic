@@ -3,7 +3,7 @@
   panoptic.core
   (:use [potemkin :only [import-vars]])
   (:require [taoensso.timbre :as timbre :only [set-level warn]]
-            [panoptic.watchers core file-watcher directory-watcher]
+            [panoptic.watchers core file-watcher directory-watcher clipboard-watcher]
             [panoptic.runners simple-runner multi-runner]
             [panoptic.data.core :as data]))
 
@@ -46,6 +46,13 @@
    on-directory-create
    on-directory-delete]
   
+  [panoptic.watchers.clipboard-watcher
+
+   clipboard-watcher
+
+   on-content-set
+   on-content-clear]
+
   [panoptic.runners.simple-runner
    
    simple-runner]
@@ -63,7 +70,7 @@
 ;; ## Run Wrapper
 
 (defn- run!*
-  [watch-fn initial-entities & {:keys [id interval threads distribute]}]
+  [watch-fn initial & {:keys [id interval threads distribute]}]
   (let [interval (or interval 1000)
         threads (or threads 1)
         id (keyword (or id (panoptic.runners.core/generate-watcher-id)))]
@@ -73,7 +80,10 @@
       (if (= threads 1)
         (simple-runner watch-fn id interval)
         (multi-runner watch-fn id distribute threads interval))
-      (watch-entities! initial-entities)
+      (watch-entities! 
+        (concat 
+          (panoptic.watchers.core/initial-entities watch-fn) 
+          initial))
       (start-watcher!))))
 
 (defn run!

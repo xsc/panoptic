@@ -53,8 +53,8 @@
 
 (defn file-list-contents
   "Get Clipboard contents as a seq of File objects."
-  ([] (contents *clipboard* DataFlavor/javaFileListFlavor))
-  ([clipboard] (contents clipboard DataFlavor/javaFileListFlavor)))
+  ([] (seq (contents *clipboard* DataFlavor/javaFileListFlavor)))
+  ([clipboard] (seq (contents clipboard DataFlavor/javaFileListFlavor))))
 
 (defn byte-contents
   "Get contents of clipboard as byte array (either the UTF-8 bytes of a string

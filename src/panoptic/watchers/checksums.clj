@@ -49,3 +49,26 @@
 (defmethod file-checksum-fn :sha1 [_] (wrap-file-checksum cs/sha1-file))
 (defmethod file-checksum-fn :sha256 [_] (wrap-file-checksum cs/sha256-file))
 (defmethod file-checksum-fn :sha512 [_] (wrap-file-checksum cs/sha512-file))
+
+;; ## Calculating String Checksums
+
+(defmulti string-checksum-fn 
+  "Get function used to compute file checksum."
+  (fn [k] (if (fn? k) ::fn k))
+  :default :crc32)
+
+(defmethod string-checksum-fn ::fn
+  [f]
+  f)
+
+(defn- wrap-string-checksum
+  [f]
+  #(when % (f %)))
+
+(defmethod string-checksum-fn :last-modified [_] (wrap-string-checksum fs/last-modified))
+(defmethod string-checksum-fn :crc32 [_] (wrap-string-checksum cs/crc32))
+(defmethod string-checksum-fn :adler32 [_] (wrap-string-checksum cs/adler32))
+(defmethod string-checksum-fn :md5 [_] (wrap-string-checksum cs/md5))
+(defmethod string-checksum-fn :sha1 [_] (wrap-string-checksum cs/sha1))
+(defmethod string-checksum-fn :sha256 [_] (wrap-string-checksum cs/sha256))
+(defmethod string-checksum-fn :sha512 [_] (wrap-string-checksum cs/sha512))

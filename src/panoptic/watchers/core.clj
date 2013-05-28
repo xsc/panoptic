@@ -62,6 +62,8 @@
 ;; ## Protocol for WatchFn
 
 (definterface+ WatchFunction
+  (initial-entities [this]
+    "Get seq of initial entities to add to WatchRunner after start.")
   (update-function [this]
     "Get WatchFn's update function.")
   (entity-handler [this]
@@ -164,10 +166,13 @@
                      (:key data) `(let [f# ~(:key data)] (fn [k# m#] (vector (f# k# m#))))
                      :else `(fn [k# _#] [k#]))
         value-fn (or (:values data) `(constantly {}))
-        init-fn (or (:init data) `identity)]
+        init-fn (or (:init data) `identity)
+        initial (or (:initial data) [])
+        ]
     `(do 
        (deftype+ ~T [update-fn# key-fn# value-fn# handle-fn# params#]
          WatchFunction
+         (initial-entities [this#] ~initial)
          (update-function [this#] update-fn#)
          (entity-handler [this#] handle-fn#)
          (create-entity-keys [this# e# m#] (key-fn# e# m#))
@@ -175,6 +180,14 @@
          (wrap-entity-handler [this# f#] (new ~T update-fn# key-fn# value-fn# (f# handle-fn#) params#))
          (wrap-watch-fn [this# f#] (new ~T (f# update-fn#) key-fn# value-fn# handle-fn# params#))
          ~@entity-handlers)
+       (defmethod print-method ~T
+         [o# w#]
+         (print-simple
+           (str
+             ~(str "#<" (name id) "@") 
+             (Integer/toHexString (.hashCode o#)) 
+             ">")
+           w#))
        (defn ~id
          ~docstring
          [& args#]
