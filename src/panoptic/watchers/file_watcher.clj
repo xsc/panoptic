@@ -22,8 +22,10 @@
   [& {:keys [checksum]}]
   :let [checker (cs/file-checksum-fn checksum)]
   :update #(cs/update-checksum checker :path %)
-  :keys   (fn [k _] (vector (fs/absolute-path k)))
-  :values (fn [p _ _] (f/file p))
+  :keys   (fn [k created?] (vector [(fs/absolute-path k) created?]))
+  :values (fn [p _ created?] 
+            (let [f (f/file p)]
+              (if created? (data/set-missing f) f)))
 
   FileEntityHandlers 
   (on-file-create [this f] (on-entity-create this f)) 

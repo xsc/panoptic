@@ -54,7 +54,7 @@
    the given root path."
   [root-path & opts]
   (when-let [{:keys [path] :as d} (apply directory root-path opts)] 
-    (let [dirs (:directories d)] 
+    (let [dirs (:directories (data/children d))] 
       (if-not (seq dirs)
         [d]
         (cons d (mapcat #(apply directories (str path "/" %) opts) dirs))))))

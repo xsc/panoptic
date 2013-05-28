@@ -36,7 +36,7 @@
   [refresh-fn opts]
   :update #(update-directory! refresh-fn %)
   :keys  (fn [k created?]
-           (let [paths (cons (fs/absolute-path k) (fs/list-directories-recursive k))]
+           (let [paths (cons (fs/absolute-path k) (map :path (apply d/directories k opts)))]
              (if-not created?
                paths
                (map #(vector % created?) paths))))
