@@ -3,7 +3,8 @@
   panoptic.watchers.clipboard-watcher
   (:use panoptic.watchers.core)
   (:require [panoptic.utils.clipboard :as clip]
-            [panoptic.watchers.checksums :as cs]))
+            [panoptic.watchers.checksums :as cs]
+            [panoptic.data.core :as data]))
 
 ;; ## Protocol
 
@@ -31,7 +32,7 @@
             (let [e (assoc e :data (data-fn))] 
               (cs/update-checksum #(when % (.hashCode %)) :data e)))
   :key (constantly ::c)
-  :values (constantly {})
+  :values (constantly (data/set-missing {}))
   :initial [:go]
 
   ClipboardEntityHandlers
