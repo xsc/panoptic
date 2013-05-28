@@ -19,7 +19,6 @@
             reset-a! #(do (reset! a %) (sleep (* 2 ?u)))
             es (take (* 2 ?threads) (map keyword (repeatedly gensym)))]
         (fact "about multi-runner"
-          w => #(satisfies? WatchRunner %)
           (watched-entities w) => {}
 
           (watch-entities! w es) => truthy

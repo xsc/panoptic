@@ -65,17 +65,15 @@
 
 ;; ## File Watcher
 
-(defwatch file-watcher*
-  FileEntityHandlers
-  (on-file-create [this f] (on-entity-create this f))
-  (on-file-modify [this f] (on-entity-modify this f))
-  (on-file-delete [this f] (on-entity-delete this f)))
-
-(defn file-watcher
+(defwatcher file-watcher 
   "Create WatchFn for Files."
-  [& {:keys [checksum]}] 
-  (let [checker (or (checksum-fn checksum) cs/crc32)]
-    (file-watcher*
-      #(update-file! checker %)
-      (fn [k _] (vector (fs/absolute-path k)))
-      (fn [p _ _] (f/file p)))))
+  [& {:keys [checksum]}]
+  :let [checker (or (checksum-fn checksum) cs/crc32)]
+  :update #(update-file! checker %)
+  :keys   (fn [k _] (vector (fs/absolute-path k)))
+  :values (fn [p _ _] (f/file p))
+
+  FileEntityHandlers 
+  (on-file-create [this f] (on-entity-create this f)) 
+  (on-file-modify [this f] (on-entity-modify this f)) 
+  (on-file-delete [this f] (on-entity-delete this f)))

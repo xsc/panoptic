@@ -31,7 +31,23 @@
 
 ;; ## Recursive Directory Watcher
 
-(defwatch recursive-directory-watcher*
+(defwatcher recursive-directory-watcher
+  ""
+  [refresh-fn opts]
+  :update #(update-directory! refresh-fn %)
+  :keys  (fn [k created?]
+           (let [paths (cons (fs/absolute-path k) (fs/list-directories-recursive k))]
+             (if-not created?
+               paths
+               (map #(vector % created?) paths))))
+  :values (fn [p _ created?] 
+            (let [dir (apply d/directory p opts)]
+              (if-not created? dir (data/set-missing dir))))
+  :init   (fn [this]
+            (-> this
+              (on-child-create :directories #(watch-entity! %1 (str (:path %2) "/" %3) :created)) 
+              (on-child-delete :directories #(unwatch-entity! %1 (str (:path %2) "/" %3)))))
+
   DirectoryEntityHandlers
   (on-directory-create [this f]
     (on-entity-create this f))
@@ -45,25 +61,15 @@
     (on-child-delete this :files #(f %1 %2 (f/file (str (:path %2) "/" %3)))))
   (on-file-modify [this f] this))
 
-(defn- recursive-directory-watcher
-  [refresh-fn opts]
-  (->
-    (recursive-directory-watcher*
-      (partial update-directory! refresh-fn) 
-      (fn [k created?]
-        (let [paths (cons (fs/absolute-path k) (fs/list-directories-recursive k))]
-          (if-not created?
-            paths
-            (map #(vector % created?) paths))))
-      (fn [p _ created?] 
-        (let [dir (apply d/directory p opts)]
-          (if-not created? dir (data/set-missing dir)))))
-    (on-child-create :directories #(watch-entity! %1 (str (:path %2) "/" %3) :created)) 
-    (on-child-delete :directories #(unwatch-entity! %1 (str (:path %2) "/" %3)))))
-
 ;; ## Normal Directory Watcher
 
-(defwatch normal-directory-watcher*
+(defwatcher normal-directory-watcher
+  ""
+  [refresh-fn opts]
+  :update #(update-directory! refresh-fn %)
+  :key    (fn [k _] (fs/absolute-path k))
+  :values (fn [k _ _] (apply d/directory k opts)) 
+
   DirectoryEntityHandlers
   (on-directory-create [this f]
     (-> this
@@ -80,13 +86,6 @@
   (on-file-delete [this f]
     (on-child-delete this :files #(f %1 %2 (f/file (str (:path %2) "/" %3)))))
   (on-file-modify [this f] this))
-
-(defn- normal-directory-watcher
-  [refresh-fn opts]
-  (normal-directory-watcher*
-    #(update-directory! refresh-fn %) 
-    (fn [k _] (vector (fs/absolute-path k)))
-    (fn [p _ _] (apply d/directory p opts))))
 
 ;; ## Putting it together
 

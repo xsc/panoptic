@@ -1,14 +1,15 @@
 (ns ^{:doc "Watcher Basics"
       :author "Yannick Scherer"}
   panoptic.watchers.core
-  (:use [taoensso.timbre :only [debug info warn error]])
+  (:use [taoensso.timbre :only [debug info warn error]]
+        [potemkin :only [definterface+ deftype+]])
   (:require [panoptic.utils.core :as u]
             [panoptic.data.core :as data]))
 
 ;; ## WatchRunner Protocol
 
-(defprotocol WatchRunner
-  "Protocol for Watchers. Watchers should also implement clojure.lang.IDeref"
+(definterface+ WatchRunner
+;;"Protocol for Watchers. Watchers should also implement clojure.lang.IDeref"
   (watch-entities!* [this es metadata]
     "Add Entities to Watch List.")
   (unwatch-entities!* [this es metadata]
@@ -39,9 +40,29 @@
   ([w e m] (unwatch-entities!* w [e] m))
   ([w e] (unwatch-entity! w e nil)))
 
+(defmacro defrunner 
+  "Create new Runner type. Expects the implementation of the
+   WatchRunner interface first and any other interface/protocol
+   implementations after that. Will create a type with the given
+   ID and implement `print-method` to print the watched entities."
+  [id fields & impl]
+  `(do
+     (deftype+ ~id [~@fields]
+       WatchRunner
+       ~@impl)
+     (defmethod print-method ~id
+       [o# w#]
+       (print-simple
+         (str 
+           ~(str "#<" (name id) " ")
+           (pr-str (watched-entities o#))
+           ">")
+         w#))
+     ~id))
+
 ;; ## Protocol for WatchFn
 
-(defprotocol WatchFunction
+(definterface+ WatchFunction
   (update-function [this]
     "Get WatchFn's update function.")
   (entity-handler [this]
@@ -128,35 +149,52 @@
     (into {})))
 
 ;; ## Watch Logic
-;;
-;; The watcher logic is a type with the following keys/fields: 
-;; - `update-fn`: a function that takes an entity, performs checks, updates, ...
-;;   and returns the updated entity
-;; - `add-fn`: a function that takes a map and an entity description (e.g. a
-;;   file path) and returns a new map with the additional entities.
-;; - `remove-fn`: a function that takes a map and an entity description and returns
-;;   a new map without the desired entities.
-;; - `handle-fn`: a function that takes a watcher, an entity key and the entity and 
-;;   performs any tasks changes to the entity require
 
-(defmacro defwatch
-  [id & entity-handlers]
-  (let [T (gensym "T")]
+(defmacro defwatcher
+  "Create new Watcher type and constructor function."
+  [id docstring params & args]
+  (let [T (gensym "T")
+        [data entity-handlers] (let [p (partition 2 2 nil args)
+                                     [d e] (split-with (comp keyword? first) p)]
+                                 (vector
+                                   (into {} (map vec d))
+                                   (apply concat e)))
+        let-bindings (:let data)
+        update-fn (or (:update data) `identity)
+        key-fn (cond (:keys data) (:keys data)
+                     (:key data) `(let [f# ~(:key data)] (fn [k# m#] (vector (f# k# m#))))
+                     :else `(fn [k# _#] k#))
+        value-fn (or (:values data) `(fn [k# & _#] k#))
+        init-fn (or (:init data) `identity)]
     `(do 
-       (deftype ~T [update-fn# key-fn# value-fn# handle-fn#]
+       (deftype+ ~T [update-fn# key-fn# value-fn# handle-fn# params#]
          WatchFunction
          (update-function [this#] update-fn#)
          (entity-handler [this#] handle-fn#)
          (create-entity-keys [this# e# m#] (key-fn# e# m#))
          (create-entity-value [this# k# e# m#] (value-fn# k# e# m#))
-         (wrap-entity-handler [this# f#] (new ~T update-fn# key-fn# value-fn# (f# handle-fn#)))
-         (wrap-watch-fn [this# f#] (new ~T (f# update-fn#) key-fn# value-fn# handle-fn#))
+         (wrap-entity-handler [this# f#] (new ~T update-fn# key-fn# value-fn# (f# handle-fn#) params#))
+         (wrap-watch-fn [this# f#] (new ~T (f# update-fn#) key-fn# value-fn# handle-fn# params#))
          ~@entity-handlers)
        (defn ~id
-         ([u#] (~id u# nil nil))
-         ([u# a# r#] (new ~T u# (or a# (fn [x# _#] [x#])) (or r# (fn [_# x# _#] x#)) nil))))))
+         ~docstring
+         [& args#]
+         (let [[~@params] args#
+               ~@let-bindings
+               init# ~init-fn]
+           (init#
+             (new ~T 
+                  (or ~update-fn identity) 
+                  (or ~key-fn (fn [k# & _#] [k#])) 
+                  (or ~value-fn (fn [k# & _#] k#)) 
+                  nil args#)))))))
 
-(defwatch watch-fn)
+(defwatcher watch-fn
+  "Generic Watch Function."
+  [u k v]
+  :update u
+  :keys   k
+  :values v)
 
 ;; ## Generic Handlers
 

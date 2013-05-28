@@ -74,8 +74,7 @@
 
 ;; ## Multi Runner
 
-(deftype MultiRunner [id watch-fn distributor thread-count entities-atom stop-atom threads-atom notify-queue]
-  WatchRunner
+(defrunner MultiRunner [id watch-fn distributor thread-count entities-atom stop-atom threads-atom notify-queue]
   (watch-entities!* [this es metadata]
     (swap! entities-atom #(add-entities watch-fn % es metadata))
     (d/notify-entities-added! notify-queue es)
@@ -108,12 +107,6 @@
         @thread)
       (catch Exception ex
         (error ex "when dereferencing MultiRunner threads.")))))
-
-(defmethod print-method MultiRunner
-  [o w]
-  (print-simple 
-    (str "#<MultiRunner: " (watched-entities o) ">")
-    w))
 
 ;; ## Creation/Start Functions
 

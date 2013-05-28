@@ -11,8 +11,7 @@
 ;; The simple runner has its entities in a single atom. It runs a
 ;; standlone watcher as defined in `panoptic.runners.core`.
 
-(deftype SimpleRunner [id watch-fn interval entities-atom stop-atom threads-atom]
-  WatchRunner
+(defrunner SimpleRunner [id watch-fn interval entities-atom stop-atom threads-atom]
   (watch-entities!* [this es metadata]
     (swap! entities-atom #(add-entities watch-fn % es metadata))
     this)
@@ -35,12 +34,6 @@
   clojure.lang.IDeref
   (deref [_]
     (doseq [t @threads-atom] @t)))
-
-(defmethod print-method SimpleRunner
-  [o w]
-  (print-simple 
-    (str "#<SimpleRunner: " (watched-entities o) ">")
-    w))
 
 ;; ## Create Functions
 

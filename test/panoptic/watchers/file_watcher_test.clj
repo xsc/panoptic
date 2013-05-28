@@ -17,7 +17,6 @@
   
   (fact "about file-watcher's add/remove entity logic"
     (let [p (fs/absolute-path "some-file")]
-      fw => #(satisfies? WatchFunction %)
       (add-entities fw {} ["some-file"] nil) => #(contains? % p)
       (remove-entities fw {p {:path p}} ["some-file"] nil) => {})) 
 
