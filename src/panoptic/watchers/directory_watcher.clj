@@ -74,11 +74,17 @@
   (on-directory-create [this f]
     (-> this
       (on-entity-create f) 
-      (on-child-create :directories #(f %1 %2 (d/directory (str (:path %2) "/" %3))))))
+      (on-child-create :directories 
+                       (fn [runner parent child-name]
+                         (let [p (str (:path parent) "/" child-name)]
+                           (f runner p (d/directory p)))))))
   (on-directory-delete [this f]
     (-> this
       (on-entity-delete f) 
-      (on-child-delete :directories #(f %1 %2 (d/directory (str (:path %2) "/" %3))))))
+      (on-child-delete :directories 
+                       (fn [runner parent child-name]
+                         (let [p (str (:path parent) "/" child-name)]
+                           (f runner p (d/directory p)))))))
   
   FileEntityHandlers
   (on-file-create [this f]
