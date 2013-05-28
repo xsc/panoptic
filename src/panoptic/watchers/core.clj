@@ -9,7 +9,6 @@
 ;; ## WatchRunner Protocol
 
 (definterface+ WatchRunner
-;;"Protocol for Watchers. Watchers should also implement clojure.lang.IDeref"
   (watch-entities!* [this es metadata]
     "Add Entities to Watch List.")
   (unwatch-entities!* [this es metadata]
@@ -163,8 +162,8 @@
         update-fn (or (:update data) `identity)
         key-fn (cond (:keys data) (:keys data)
                      (:key data) `(let [f# ~(:key data)] (fn [k# m#] (vector (f# k# m#))))
-                     :else `(fn [k# _#] k#))
-        value-fn (or (:values data) `(fn [k# & _#] k#))
+                     :else `(fn [k# _#] [k#]))
+        value-fn (or (:values data) `(constantly {}))
         init-fn (or (:init data) `identity)]
     `(do 
        (deftype+ ~T [update-fn# key-fn# value-fn# handle-fn# params#]
@@ -186,7 +185,7 @@
              (new ~T 
                   (or ~update-fn identity) 
                   (or ~key-fn (fn [k# & _#] [k#])) 
-                  (or ~value-fn (fn [k# & _#] k#)) 
+                  (or ~value-fn (constantly {})) 
                   nil args#)))))))
 
 (defwatcher watch-fn

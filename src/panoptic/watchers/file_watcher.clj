@@ -3,7 +3,8 @@
   panoptic.watchers.file-watcher
   (:use panoptic.watchers.core
         [taoensso.timbre :only [error info]])
-  (:require [panoptic.data.file :as f]
+  (:require [panoptic.watchers.checksum-watcher :as cw :only [update-checksum]]
+            [panoptic.data.file :as f]
             [panoptic.data.core :as data]
             [panoptic.utils.fs :as fs :only [file-exists? last-modified]]
             [pandect.core :as cs]))
@@ -41,35 +42,13 @@
 (defmethod checksum-fn :sha256 [_] (wrap-checksum cs/sha256-file))
 (defmethod checksum-fn :sha512 [_] (wrap-checksum cs/sha512-file))
 
-;; ## Logic
-
-(defn- update-file!
-  "Check a file (given as a file map) for changes using the given checker. Returns
-   an updated file map."
-  [checker {:keys [path] :as f}]
-  (try
-    (let [chk0 (data/checksum f)
-          chk1 (checker path)]
-      (condp = [chk0 chk1]
-        [nil  nil]  (data/set-missing f)
-        [chk0 chk0] (data/set-untouched f)
-        [nil  chk1] (let [f-new (data/set-created f chk1)]
-                      (if (not (data/exists? f)) 
-                        f-new
-                        (data/set-untouched f-new)))
-        [chk0 nil]  (data/set-deleted f)
-        (data/set-modified f chk1)))
-    (catch Exception ex
-      (error ex "in file checker for file" path)
-      (data/set-untouched f))))
-
 ;; ## File Watcher
 
 (defwatcher file-watcher 
   "Create WatchFn for Files."
   [& {:keys [checksum]}]
   :let [checker (or (checksum-fn checksum) cs/crc32)]
-  :update #(update-file! checker %)
+  :update #(cw/update-checksum checker :path %)
   :keys   (fn [k _] (vector (fs/absolute-path k)))
   :values (fn [p _ _] (f/file p))
 
