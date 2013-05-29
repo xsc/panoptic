@@ -5,8 +5,8 @@
         [taoensso.timbre :only [error info]])
   (:require [panoptic.data.file :as f]
             [panoptic.data.core :as data]
-            [panoptic.utils.fs :as fs :only [file-exists? last-modified]]
-            [panoptic.watchers.checksums :as cs]))
+            [panoptic.data.checksums :as cs]
+            [panoptic.utils.fs :as fs :only [file-exists? last-modified]]))
 
 ;; ## Protocol
 
@@ -18,7 +18,8 @@
 ;; ## File Watcher
 
 (defwatcher file-watcher 
-  "Create WatchFn for Files."
+  "Create watcher that updates a pool of files given by absolute or
+   relative paths."
   [& {:keys [checksum]}]
   :let [checker (cs/file-checksum-fn checksum)]
   :update #(cs/update-checksum checker :path %)

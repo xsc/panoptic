@@ -3,7 +3,7 @@
   panoptic.watchers.clipboard-watcher
   (:use panoptic.watchers.core)
   (:require [panoptic.utils.clipboard :as clip]
-            [panoptic.watchers.checksums :as cs]
+            [panoptic.data.checksums :as cs]
             [panoptic.data.core :as data]))
 
 ;; ## Protocol

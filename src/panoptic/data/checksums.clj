@@ -1,6 +1,6 @@
 (ns ^ {:doc "Checksum Functions"
        :author "Yannick Scherer"}
-  panoptic.watchers.checksums
+  panoptic.data.checksums
   (:require [panoptic.data.core :as data]
             [panoptic.utils.fs :as fs :only [exists? last-modified]]
             [pandect.core :as cs])
