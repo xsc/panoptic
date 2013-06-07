@@ -32,7 +32,7 @@
 ;; ## Recursive Directory Watcher
 
 (defwatcher recursive-directory-watcher
-  ""
+  "Watcher that automatically adds child directories to its watch list."
   [refresh-fn opts]
   :update #(update-directory! refresh-fn %)
   :keys  (fn [k created?]
@@ -64,7 +64,8 @@
 ;; ## Normal Directory Watcher
 
 (defwatcher normal-directory-watcher
-  ""
+  "Watcher that watches only the directories in its watch list, not their
+   children."
   [refresh-fn opts]
   :update #(update-directory! refresh-fn %)
   :key    (fn [k _] (fs/absolute-path k))
