@@ -31,11 +31,11 @@ via only one namespace:
 - child directory creation and deletion
 - child file creation and deletion
 - creation and deletion of all nodes in a directory hierarchy
+- clipboard modifications
 
 ## Roadmap
 
 - observing file modifications based on directories
-- observing the clipboard
 - observing web service data
 
 ## Quick Examples
