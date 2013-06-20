@@ -4,8 +4,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [com.taoensso/timbre "2.0.1"]
-                 [potemkin "0.3.0-SNAPSHOT"]
+                 [com.taoensso/timbre "2.1.2"]
+                 [potemkin "0.3.0"]
                  [pandect "0.2.3"]]
   :repositories  {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
   :exclusions [org.clojure/clojure]
