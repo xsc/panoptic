@@ -1,4 +1,4 @@
-## Changes: `panoptic`
+## Changes
 
 ### 0.2.1
 
