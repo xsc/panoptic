@@ -2,10 +2,12 @@
 
 __panoptic__ monitors single files or whole directories for changes.
 
+__panoptic is now deprecated since there are cleaner and better ways - most notably Java NIO's Watcher API -
+to watch the filesystem. If you want to take over, contact me; otherwise, future development will be limited
+to handling issues with the existing implementation.__
+
 [![Build Status](https://travis-ci.org/xsc/panoptic.png)](https://travis-ci.org/xsc/panoptic)
 [![endorse](https://api.coderwall.com/xsc/endorsecount.png)](https://coderwall.com/xsc)
-
-This is only for playing around for now. But much more functionality can be expected.
 
 ## Usage
 
